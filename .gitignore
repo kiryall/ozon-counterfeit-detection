@@ -30,6 +30,7 @@ venv/
 *.model
 *.bin
 catboost_info/
+model_cache/
 
 # Секреты и конфиги
 *.env
