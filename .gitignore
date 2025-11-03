@@ -1,0 +1,43 @@
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Виртуальное окружение
+env/
+venv/
+.venv/
+
+# Данные (скрываем датасеты)
+*.csv
+*.tsv
+*.xls
+*.xlsx
+*.parquet
+*.h5
+*.hdf5
+*.json
+*.npy
+*.npz
+*.pkl
+*.joblib
+*.sav
+*.png
+
+# Модели
+*.model
+*.bin
+catboost_info/
+
+# Секреты и конфиги
+*.env
+.env.*
+secrets.json
+config.yaml
+
+# Редакторы / IDE
+.vscode/
+.idea/
+.DS_Store
