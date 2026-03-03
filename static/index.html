@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Ozon Fake Detector</title>
+    <style>
+    body {
+        background-color: #0b1c2d;
+        font-family: monospace;
+    }
+
+    .window {
+        width: 840px;
+        margin: 100px auto;
+        background-color: #e0e0e0;
+        border: 2px solid #000;
+        box-shadow: 10px 10px 0 #000;
+    }
+
+    .title {
+        background-color: #f3b8b8;
+        font-family: monospace;
+        font-size: 16px;
+        padding: 6px;
+        text-align: center;
+    }
+
+    .content {
+        padding: 16px;
+    }
+
+    label {
+        display: block;
+        margin-bottom: 8px;
+        font-family: monospace;
+        font-size: 16px;
+    }
+
+    input[type="text"] {
+        width: 100%;
+        font-family: monospace;
+        font-size: 16px;
+        padding: 6px;
+        margin-bottom: 16px;
+        background-color: #ffffff;
+        border: 1px solid #000;
+    }
+
+    .buttons {
+        text-align: center;
+    }
+
+    button {
+        font-family: monospace;
+        font-size: 16px;
+        padding: 6px 16px;
+        margin: 0 8px;
+        cursor: pointer;
+        border: 1px solid #000;
+        background-color: #d0d0d0;
+    }
+
+    button:hover {
+        background-color: #c0c0c0;
+    }
+
+    .result {
+        margin-top: 16px;
+        padding: 12px;
+        border-top: 1px solid #000;
+        text-align: center;
+        background-color: #f0f0f0;
+    }
+    </style>
+
+</head>
+<body>
+
+<div class="window">
+    <div class="title">Ozon Fake Detector</div>
+
+    <div class="content">
+        <form method="post" action="/predict">
+            <label>Введите ссылку на товар:</label>
+            <input type="text" name="url" placeholder="https://www.ozon.ru/..." required>
+
+            <div class="buttons">
+                <button type="submit">Узнать</button>
+            </div>
+        </form>
+
+        {% if result %}
+        <div class="result">
+            Результат: {{ result }}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+</body>
+</html>
+
+{% if result %}
+<script>
+    // Убираем result из URL после показа
+    window.history.replaceState({}, document.title, "/");
+</script>
+{% endif %}

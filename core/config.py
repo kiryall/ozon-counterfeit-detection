@@ -1,10 +1,11 @@
+import os
 from torchvision import transforms
 
 # paths
 DATA = "data/"
 DATA_CSV = f"{DATA}data.csv"
 IMG_DIR = f"{DATA}img/"
-SUBMISSION_DIR = f"submission/"
+SUBMISSION_DIR = "submission/"
 
 # Reproducibility
 SEED = 42
@@ -42,16 +43,19 @@ TRANSFORMS = transforms.Compose([
 
 # model
 CATBOOST_PARAMS = {
-    "iterations": 2000,
-    "learning_rate": 0.02,
-    "depth": 6,
+    "iterations": 500,
+    "learning_rate": 0.03,
+    "depth": 4,
     "random_seed": SEED,
-    "eval_metric": 'Logloss',
+    "eval_metric": 'F1',
     'auto_class_weights': 'Balanced',
-    "early_stopping_rounds": 100,
-    'l2_leaf_reg': 3,
-    "random_strength": 1,
-    "bagging_temperature": 0.5,
+    "early_stopping_rounds": 50,
+    'l2_leaf_reg': 5,
+    "random_strength": 2,
+    "bagging_temperature": 0.8,
+    "max_ctr_complexity": 4,
+    "min_data_in_leaf": 10,
+    "use_best_model": True,
 }
 
 PARAM_GRID_CAT = {
@@ -62,3 +66,10 @@ PARAM_GRID_CAT = {
 }
 
 MODEL_CACHE_DIR = "model_cache"
+
+MODEL_PATH = "ml_model/catboost_model.cbm"
+
+# Пути для сохранения извлеченных признаков
+FEATURES_PATH = os.path.join(DATA, "features.csv")
+TARGET_PATH = os.path.join(DATA, 'resolution.csv')
+CAT_FEATURES_PATH = os.path.join(DATA, "cat_features.json")

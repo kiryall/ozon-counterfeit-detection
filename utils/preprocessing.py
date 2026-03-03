@@ -1,34 +1,13 @@
+# Классы для предобработки табличных и текстовых данных
+
 import os
 import re
-import warnings
 
-import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
-import seaborn as sns
-from catboost import CatBoostClassifier, Pool
-from IPython.display import display, HTML
-from sklearn import set_config
-from sklearn.compose import ColumnTransformer
-from sklearn.impute import SimpleImputer
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import (
-    accuracy_score,
-    confusion_matrix,
-    f1_score,
-)
-
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import (
-    LabelEncoder,
-    MinMaxScaler,
-    OneHotEncoder,
-    RobustScaler,
-    StandardScaler,
-)
 from bs4 import BeautifulSoup
+from sklearn.impute import SimpleImputer
 
-import config
+import core.config as config
 
 
 class TabularPreprocessor:
@@ -50,14 +29,14 @@ class TabularPreprocessor:
             "name_rus",
             "commercial_type_name4",
         ],
-        max_unique_categorical=50
+        max_unique_categorical=50,
     ):
         self.numeric_features = None
         self.categorical_features = None
         self.img_dir = img_dir
         self.text_columns = text_columns
         self.max_unique_categorical = max_unique_categorical
-        self.auto_detected_categorical = [] 
+        self.auto_detected_categorical = []
 
     def _auto_detect_categorical(self, df):
         """
@@ -81,10 +60,9 @@ class TabularPreprocessor:
 
         return potential_categorical
 
-
     def _add_indicators(self, df):
         # индикатор наличия картинки
-        df["has_image"] = df['item_id'].apply(
+        df["has_image"] = df["item_id"].apply(
             lambda x: int(os.path.exists(os.path.join(self.img_dir, f"{int(x)}.png")))
         )
         # индикатор наличия текста
@@ -93,7 +71,7 @@ class TabularPreprocessor:
 
     def fit(self, df):
         """Запоминает статистики для нормализации/кодирования."""
-        
+
         df = self._add_indicators(df.copy())
         df = df.set_index(config.ITEM)
 
@@ -107,15 +85,12 @@ class TabularPreprocessor:
             .columns.tolist()
         )
 
-        self.categorical_features = (list(
-            set(base_categorical + auto_categorical)
-        ))
+        self.categorical_features = list(set(base_categorical + auto_categorical))
 
         self.numeric_features = (
             df.drop(self.text_columns, axis=1)
             .select_dtypes(exclude=["object"])
-            .columns
-            .difference(auto_categorical)
+            .columns.difference(auto_categorical)
             .tolist()
         )
 
@@ -126,7 +101,7 @@ class TabularPreprocessor:
 
     def transform(self, df):
         """Преобразует табличные признаки в массив."""
-        
+
         df = self._add_indicators(df.copy())
         df = df.set_index(config.ITEM)
 
@@ -135,34 +110,33 @@ class TabularPreprocessor:
 
         if self.categorical_features:
             for col in self.categorical_features:
-            # Заполняем пропуски
+                # Заполняем пропуски
                 if df[col].isna().any():
-                    if df[col].dtype == 'object':
-                        df[col] = df[col].fillna('missing')
+                    if df[col].dtype == "object":
+                        df[col] = df[col].fillna("missing")
                     else:
                         df[col] = df[col].fillna(999999)
-            
+
                 # Преобразуем в category codes
-                df[col] = df[col].astype('category').cat.codes
-        
+                df[col] = df[col].astype("category").cat.codes
+
         return df[self.numeric_features + self.categorical_features]
 
     def fit_transform(self, X, y=None):
         return self.fit(X).transform(X)
-    
+
     def get_feature_info(self):
         """Возвращает информацию о признаках для отладки"""
         return {
-            'numeric_features': self.numeric_features,
-            'categorical_features': self.categorical_features,
-            'auto_detected_categorical': self.auto_detected_categorical,
-            'total_features': len(self.numeric_features) + len(self.categorical_features)
+            "numeric_features": self.numeric_features,
+            "categorical_features": self.categorical_features,
+            "auto_detected_categorical": self.auto_detected_categorical,
+            "total_features": len(self.numeric_features)
+            + len(self.categorical_features),
         }
-    
+
     def get_cat_features(self):
-        """
-        Возвращает список категориальных фич
-        """
+        """Возвращает список категориальных фич"""
         return self.categorical_features
 
 
@@ -170,7 +144,7 @@ class TextPreprocessor:
     """
     Класс для предобработки текстовых данных в датафрейме.
     Предоставляет функционал для очистки текста и обработки пропущенных значений.
-    
+
     Основные возможности:
     - Удаление HTML-тегов
     - Очистка от специальных символов

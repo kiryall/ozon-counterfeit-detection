@@ -42,3 +42,7 @@ config.yaml
 .vscode/
 .idea/
 .DS_Store
+
+data/
+*.log
+OLD/

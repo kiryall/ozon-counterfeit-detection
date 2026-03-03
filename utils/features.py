@@ -1,21 +1,18 @@
-import os
-import re
-import warnings
+# Класс для получения эмбеддингов изображений и текста
 
-from img2vec_pytorch import Img2Vec
-import pandas as pd
-import numpy as np
-from sklearn.base import BaseEstimator, TransformerMixin
-from sentence_transformers import SentenceTransformer
-from torch.utils.data import DataLoader
-from tqdm.auto import tqdm
-import torch.nn as nn
-import torch
-from PIL import Image
-import torchvision.models as models
 from pathlib import Path
 
-import config
+import numpy as np
+import pandas as pd
+import torch
+import torch.nn as nn
+import torchvision.models as models
+from sentence_transformers import SentenceTransformer
+from sklearn.base import BaseEstimator, TransformerMixin
+from torch.utils.data import DataLoader
+from tqdm.auto import tqdm
+
+import core.config as config
 
 
 class ImageFeatureExtractor(BaseEstimator, TransformerMixin):
@@ -45,7 +42,7 @@ class ImageFeatureExtractor(BaseEstimator, TransformerMixin):
             print(f'Загрузка модели из кэша {model_path}')
             try:
                 if self.model_name == 'resnet50':
-                    backbone = models.resnet50(pretrained=False)
+                    backbone = models.resnet50(weights=models.ResNet50_Weights.DEFAULT)
                     backbone.fc = nn.Identity()
                 else:
                     raise ValueError(f"Модель {self.model_name} не поддерживается")
@@ -61,7 +58,7 @@ class ImageFeatureExtractor(BaseEstimator, TransformerMixin):
         print(f'Загрузка {self.model_name}')
         try:
             if self.model_name == 'resnet50':
-                backbone = models.resnet50(pretrained=True)
+                backbone = models.resnet50(weights=models.ResNet50_Weights.DEFAULT)
                 backbone.fc = nn.Identity()
             else:
                 raise ValueError(f"Модель {self.model_name} не поддерживается")
@@ -94,7 +91,7 @@ class ImageFeatureExtractor(BaseEstimator, TransformerMixin):
         all_ids = []
 
         print("...Извлечение признаков из изображений...")
-        pbar = tqdm(total=len(loader), desc="Batches")
+        pbar = tqdm(total=len(loader), desc="Batches", leave=False, position=0)
 
         with torch.no_grad():
             for images, _, ids in loader:
@@ -103,7 +100,7 @@ class ImageFeatureExtractor(BaseEstimator, TransformerMixin):
                 feats = feats.view(feats.size(0), -1).cpu().numpy()
                 features.append(feats)
 
-                ids_list = ids.tolist() 
+                ids_list = ids.tolist()
                 all_ids.extend(ids_list)
 
                 pbar.update(1)
@@ -143,7 +140,10 @@ class SentenceEmbedder(BaseEstimator, TransformerMixin):
     """
     Класс для извлечения эмбеддингов из текста описания товара (sentence_transformers)
     """
-    def __init__(self, model_name='all-MiniLM-L6-v2', device=config.DEVICE, batch_size=config.TEXT_BATCH_SIZE):
+    def __init__(self,
+                 model_name='sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2',
+                 device=config.DEVICE,
+                 batch_size=config.TEXT_BATCH_SIZE):
         self.model_name = model_name
         self.device = device
         self.batch_size = batch_size

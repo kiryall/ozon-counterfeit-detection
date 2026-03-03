@@ -1,19 +1,18 @@
+# Универсальный классификатор для мультимодальных данных
+
+from typing import Any, Dict, List, Optional
+import os
+
 import numpy as np
 import pandas as pd
-from sklearn.base import BaseEstimator, ClassifierMixin
-from sklearn.model_selection import cross_val_score, StratifiedKFold
-from sklearn.metrics import (
-    accuracy_score,
-    confusion_matrix,
-    f1_score,
-    classification_report
-)
 from catboost import CatBoostClassifier, Pool
-from typing import Dict, Any, List, Optional
-import warnings
-warnings.filterwarnings('ignore')
+from sklearn.base import BaseEstimator, ClassifierMixin
+from sklearn.metrics import (
+    f1_score,
+)
 
-import config
+import core.config as config
+import pickle
 
 
 class MultiModalClassifier(BaseEstimator, ClassifierMixin):
@@ -159,5 +158,74 @@ class MultiModalClassifier(BaseEstimator, ClassifierMixin):
         self.classification_threshold = self._optimal_threshold(self.model, X_val, y_val)
         print(f"Оптимальный порог: {self.classification_threshold:.3f}")
         return self.classification_threshold
+    
+
+    def save_model(self, filepath: str):
+        """Сохранение модели в файл"""
+        if self.model is None:
+            raise ValueError("Модель не обучена!")
+        
+        # Определяем путь для модели и метаданных
+        # Если передан .pkl файл, разделяем на модель и метаданные
+        if filepath.endswith('.pkl'):
+            model_path = filepath.replace('.pkl', '.cbm')
+            metadata_path = filepath
+        else:
+            model_path = filepath
+            metadata_path = filepath.replace('.cbm', '_metadata.pkl')
+        
+        # Сохраняем модель CatBoost в нативном формате .cbm
+        self.model.save_model(model_path)
+        
+        # Сохраняем метаданные в отдельный файл
+        metadata = {
+            'cat_features': self.cat_features,
+            'cat_feature_indices': self.cat_feature_indices,
+            'classification_threshold': self.classification_threshold,
+            'algorithm': self.algorithm,
+            'cv_folds': self.cv_folds,
+            'random_state': self.random_state,
+            'model_params': self.model_params
+        }
+        
+        with open(metadata_path, 'wb') as f:
+            pickle.dump(metadata, f)
+
+    @classmethod
+    def load_model(cls, filepath: str):
+        """Загрузка модели из файла"""
+        
+        # Определяем пути для модели и метаданных
+        if filepath.endswith('.pkl'):
+            model_path = filepath.replace('.pkl', '.cbm')
+            metadata_path = filepath
+        else:
+            model_path = filepath
+            metadata_path = filepath.replace('.cbm', '_metadata.pkl')
+        
+        # Создаем экземпляр класса
+        loaded_model = cls()
+        
+        # Загружаем основную модель CatBoost из .cbm файла
+        if not os.path.exists(model_path):
+            raise FileNotFoundError(f"Model file not found: {model_path}")
+        loaded_model.model = CatBoostClassifier().load_model(model_path)
+        
+        # Загружаем метаданные
+        if not os.path.exists(metadata_path):
+            raise FileNotFoundError(f"Metadata file not found: {metadata_path}")
+        with open(metadata_path, 'rb') as f:
+            metadata = pickle.load(f)
+        
+        # Восстанавливаем атрибуты
+        loaded_model.cat_features = metadata['cat_features']
+        loaded_model.cat_feature_indices = metadata['cat_feature_indices']
+        loaded_model.classification_threshold = metadata['classification_threshold']
+        loaded_model.algorithm = metadata['algorithm']
+        loaded_model.cv_folds = metadata['cv_folds']
+        loaded_model.random_state = metadata['random_state']
+        loaded_model.model_params = metadata['model_params']
+        
+        return loaded_model
 
 

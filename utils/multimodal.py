@@ -1,13 +1,12 @@
-import os
-import re
-import warnings
+# Универсальный класс для объединения признаков из разных модальностей
+
 import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin
 
-import config
-from src.data_loader import ImageDataset
-from src.features import ImageFeatureExtractor, SentenceEmbedder
-from src.preprocessing import TabularPreprocessor, TextPreprocessor
+import core.config as config
+from utils.data_utils import ImageDataset
+from utils.features import ImageFeatureExtractor, SentenceEmbedder
+from utils.preprocessing import TabularPreprocessor, TextPreprocessor
 
 class MultiModalFeatureUnion(BaseEstimator, TransformerMixin):
     """
