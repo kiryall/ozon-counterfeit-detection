@@ -13,13 +13,26 @@ from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
 
 import core.config as config
+from core.logging import setup_logging
+ 
+# Настройка логирования
+logger = setup_logging(log_file="features.log", console=True, remove_file=True, logger_name="features")
 
 
 class ImageFeatureExtractor(BaseEstimator, TransformerMixin):
     """
     Класс для получения эмбеддингов изображений
     """
-    def __init__(self, model_name="resnet50", device=config.DEVICE, batch_size=config.BATCH_SIZE, num_workers=2):
+
+    MODEL_REGISTRY = {
+        "resnet18": lambda: models.resnet18(weights=models.ResNet18_Weights.DEFAULT),
+        "resnet50": lambda: models.resnet50(weights=models.ResNet50_Weights.DEFAULT),
+        "mobilenet_v3_small": lambda: models.mobilenet_v3_small(
+            weights=models.MobileNet_V3_Small_Weights.DEFAULT
+        ),
+    }
+
+    def __init__(self, model_name: str = "resnet18", device=config.DEVICE, batch_size=config.BATCH_SIZE, num_workers=2):
         self.model_name = model_name
         self.device = device
         self.batch_size = batch_size
@@ -27,52 +40,38 @@ class ImageFeatureExtractor(BaseEstimator, TransformerMixin):
         self.model = None
         self.img_columns = []
 
+    def _build_backbone(self) -> nn.Module:
+        """
+        Создание backbone модели через registry
+        """
+        if self.model_name not in self.MODEL_REGISTRY:
+            raise ValueError(f"Unsupported model: {self.model_name}")
+
+        model = self.MODEL_REGISTRY[self.model_name]()
+
+        # Унификация: убираем classifier / fc
+        if hasattr(model, "fc"):  # resnet
+            model.fc = nn.Identity()
+
+        elif hasattr(model, "classifier"):  # mobilenet / efficientnet
+            model.classifier = nn.Identity()
+
+        else:
+            raise ValueError(f"Unknown model architecture: {self.model_name}")
+
+        return model
+
     def _init_model(self):
         """
         Инициализация модели
         """
-        
-        # пути для моделей
-        model_cache_dir = Path(config.MODEL_CACHE_DIR) / self.model_name.replace("/", "_")
-        model_cache_dir.mkdir(parents=True, exist_ok=True)
+        logger.info(f"Loading model: {self.model_name}")
 
-        model_path = model_cache_dir / "model_weights.pth"
+        model = self._build_backbone()
+        model.eval()
+        model.to(self.device)
 
-        if model_path.exists():
-            print(f'Загрузка модели из кэша {model_path}')
-            try:
-                if self.model_name == 'resnet50':
-                    backbone = models.resnet50(weights=models.ResNet50_Weights.DEFAULT)
-                    backbone.fc = nn.Identity()
-                else:
-                    raise ValueError(f"Модель {self.model_name} не поддерживается")
-
-                backbone.load_state_dict(torch.load(model_path))
-                backbone.eval()
-                backbone.to(self.device)
-                return backbone
-
-            except Exception as e:
-                print(f'Ошибка при загрузке модели из кэша {e}')
-
-        print(f'Загрузка {self.model_name}')
-        try:
-            if self.model_name == 'resnet50':
-                backbone = models.resnet50(weights=models.ResNet50_Weights.DEFAULT)
-                backbone.fc = nn.Identity()
-            else:
-                raise ValueError(f"Модель {self.model_name} не поддерживается")
-
-            torch.save(backbone.state_dict(), model_path)
-            print(f'💾 Модель сохранена в кэш: {model_path}')
-
-            backbone.eval()
-            backbone.to(self.device)
-            return backbone
-
-        except Exception as e:
-            print(f'Ошибка при загрузке модели {e}')
-            raise
+        return model
 
     def fit(self, X=None, y=None):
         self.model = self._init_model()
@@ -90,7 +89,7 @@ class ImageFeatureExtractor(BaseEstimator, TransformerMixin):
         features = []
         all_ids = []
 
-        print("...Извлечение признаков из изображений...")
+        logger.info("...Извлечение признаков из изображений...")
         pbar = tqdm(total=len(loader), desc="Batches", leave=False, position=0)
 
         with torch.no_grad():
@@ -112,7 +111,7 @@ class ImageFeatureExtractor(BaseEstimator, TransformerMixin):
         pbar.close()
 
         features = np.vstack(features)
-        print(f"Извлечено {len(features)} признаков размерностью {features.shape[1]}")
+        logger.info(f"Извлечено {len(features)} признаков размерностью {features.shape[1]}")
 
         # список колонок с фичами изображений
         self.img_columns = [f'img_emb_{i}' for i in range(features.shape[1])]
@@ -160,22 +159,22 @@ class SentenceEmbedder(BaseEstimator, TransformerMixin):
         model_cache_dir.mkdir(parents=True, exist_ok=True)
 
         if model_cache_dir.exists() and any(model_cache_dir.iterdir()):
-            print(f'Загрузка модели из кэша {model_cache_dir}')
+            logger.info(f'Загрузка модели из кэша {model_cache_dir}')
             try:
                 self.model = SentenceTransformer(str(model_cache_dir), device=self.device)
-                print('Модель загружена из кэша')
+                logger.info('Модель загружена из кэша')
                 return self.model
             except Exception as e:
-                print(f'Ошибка при загрузке модели {e}')
+                logger.error(f'Ошибка при загрузке модели {e}')
 
-        print('Загрузка Sentence Transformer')
+        logger.info('Загрузка Sentence Transformer')
         try:
             self.model = SentenceTransformer(self.model_name, device=self.device)
-            print('Модель загружена')
+            logger.info('Модель загружена')
             self.model.save(str(model_cache_dir))
-            print('Модель сохранена в кэш')
+            logger.info('Модель сохранена в кэш')
         except Exception as e:
-            print(f'Ошибка при загрузке модели {e}')
+            logger.error(f'Ошибка при загрузке модели {e}')
             raise
 
         return self.model
@@ -193,7 +192,7 @@ class SentenceEmbedder(BaseEstimator, TransformerMixin):
         
         texts = df[config.TEXT_COLUMN].tolist()
 
-        print(f"Извлечение эмбеддингов для {len(texts)} текстов...")
+        logger.info(f"Извлечение эмбеддингов для {len(texts)} текстов...")
 
         try:
             embeddings = self.model.encode(
@@ -208,7 +207,7 @@ class SentenceEmbedder(BaseEstimator, TransformerMixin):
             self.text_columns = [f'text_emb_{i}' for i in range(embeddings.shape[1])]
 
             # преобразование в датафрейм
-            print(f"Получены эмбеддинги: {embeddings.shape}")
+            logger.info(f"Получены эмбеддинги: {embeddings.shape}")
             embeddings_dataframe = pd.DataFrame(
                 embeddings,
                 index=df.index,

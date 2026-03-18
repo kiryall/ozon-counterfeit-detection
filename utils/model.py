@@ -11,8 +11,13 @@ from sklearn.metrics import (
     f1_score,
 )
 
+# core.config as config
 import core.config as config
 import pickle
+
+from core.logging import setup_logging
+
+logger = setup_logging(log_file="model.log", console=True, remove_file=True, logger_name="model")
 
 
 class MultiModalClassifier(BaseEstimator, ClassifierMixin):
@@ -70,7 +75,7 @@ class MultiModalClassifier(BaseEstimator, ClassifierMixin):
     def _optimal_threshold(self, model, X_val, y_val):
         """Функция ищет оптимальный порог классификации"""
         probas = model.predict_proba(X_val)[:, 1]
-        thresholds = np.linspace(0.1, 0.9, 100)
+        thresholds = np.linspace(0.05, 0.95, 250)
         best_threshold = 0.5
         best_f1 = 0
         
@@ -156,7 +161,7 @@ class MultiModalClassifier(BaseEstimator, ClassifierMixin):
             raise ValueError("Сначала обучите модель!")
         
         self.classification_threshold = self._optimal_threshold(self.model, X_val, y_val)
-        print(f"Оптимальный порог: {self.classification_threshold:.3f}")
+        logger.info(f"Оптимальный порог: {self.classification_threshold:.3f}")
         return self.classification_threshold
     
 

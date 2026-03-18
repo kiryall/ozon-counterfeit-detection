@@ -1,9 +1,10 @@
+# utils/data_utils.py
 # Утилиты для работы с данными
 import multiprocessing as mp
 import os
+import re
 from pathlib import Path
 
-import humps
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -15,13 +16,25 @@ from sklearn.model_selection import (
 from sklearn.preprocessing import LabelEncoder
 from torch.utils.data import Dataset
 from tqdm import tqdm
-from ydata_profiling import ProfileReport
 
 import core.config as config
 
+
+def to_snake_case(name: str) -> str:
+    """
+    Convert CamelCase / camelCase → snake_case
+    """
+    if not isinstance(name, str):
+        return name
+
+    name = re.sub(r"(.)([A-Z][a-z]+)", r"\1_\2", name)
+    name = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", name)
+
+    return name.lower()
+
 def load_data(path: str):
     """
-    Загружает CSV.
+    Загружает CSV. Преобразует названия столбцов в snake_case.
 
     Args:
         path (str): путь к data.csv
@@ -29,19 +42,24 @@ def load_data(path: str):
     Returns:
         pd.DataFrame: датафрейм
     """
-    if os.path.exists(path):
-        df = pd.read_csv(path, index_col=0)
-    else:
-        print("Something is wrong")
-        df = None
-        
+
+    path = Path(path)
+
+    if not path.exists():
+        raise FileNotFoundError(f"File {path} not found")
+    
+    df = pd.read_csv(path, index_col=0)
+    df = df.copy()
+
     try:
         # преобразование названий столбцов в snake_case
-        df = df.copy()
-        df.columns = [humps.decamelize(col) for col in df.columns]
-        df.index.name = humps.decamelize(df.index.name)
+        df.columns = [to_snake_case(col) for col in df.columns]
+        
+        if df.index.name:
+            df.index.name = to_snake_case(df.index.name)
+
     except Exception as e:
-        print(f"Ошибка при преобразовании названий столбцов: {e}")
+        raise ValueError(f"Ошибка при преобразовании названий столбцов to snake_case: {e}")
 
     return df
 
@@ -135,20 +153,6 @@ class ImageDataset(Dataset):
             image = self.transform(image)
 
         return image, label, img_id
-
-
-def exploratory_data_analysis(df):
-    """
-    Создает отчет EDA
-
-    Args:
-        df (pd.DataFrame): исходные данные
-
-    """
-
-    report = ProfileReport(df, minimal=True, plot={"dpi": 200, "image_format": "png"})
-
-    report.to_notebook_iframe()
 
 
 def preview_batch(loader, num_img=8, num_row=4):

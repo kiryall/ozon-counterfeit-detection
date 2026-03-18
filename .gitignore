@@ -31,6 +31,9 @@ venv/
 *.bin
 catboost_info/
 model_cache/
+ml_models/all-MiniLM-L6-v2
+ml_models/resnet50
+ml_models/sentence-transformers_paraphrase-multilingual-MiniLM-L12-v2
 
 # Секреты и конфиги
 *.env

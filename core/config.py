@@ -7,6 +7,24 @@ DATA_CSV = f"{DATA}data.csv"
 IMG_DIR = f"{DATA}img/"
 SUBMISSION_DIR = "submission/"
 
+MODEL_CACHE_DIR = "ml_models"
+
+MODEL_PATH = os.path.join(MODEL_CACHE_DIR, 'catboost_model.cbm')
+
+# Пути для сохранения извлеченных признаков
+FEATURES_DIR = os.path.join(DATA, "features")
+TARGET_PATH = os.path.join(DATA, 'resolution.csv')
+CAT_FEATURES_PATH = os.path.join(DATA, "cat_features.json")
+MULTIMODAL_PROCESSOR_PATH = os.path.join(MODEL_CACHE_DIR, "multimodal_processor.pkl")
+
+# features
+TRAIN_FEATURES_PATH = os.path.join(FEATURES_DIR, "train_features.csv")
+VAL_FEATURES_PATH = os.path.join(FEATURES_DIR, "val_features.csv")
+TEST_FEATURES_PATH = os.path.join(FEATURES_DIR, "test_features.csv")
+
+# logging
+LOG_DIR = "logs/"
+
 # Reproducibility
 SEED = 42
 try:
@@ -43,13 +61,14 @@ TRANSFORMS = transforms.Compose([
 
 # model
 CATBOOST_PARAMS = {
-    "iterations": 500,
-    "learning_rate": 0.03,
-    "depth": 4,
+    "iterations": 2000,
+    "learning_rate": 0.01,
+    "depth": 6,
     "random_seed": SEED,
-    "eval_metric": 'F1',
-    'auto_class_weights': 'Balanced',
-    "early_stopping_rounds": 50,
+    "eval_metric": 'AUC',
+    #'auto_class_weights': 'Balanced',
+    "class_weights": [1.0, 25.0],  # Увеличиваем вес класса 1 (положительного класса)
+    "early_stopping_rounds": 200,
     'l2_leaf_reg': 5,
     "random_strength": 2,
     "bagging_temperature": 0.8,
@@ -64,12 +83,3 @@ PARAM_GRID_CAT = {
     'depth': [3],  # Глубина деревьев
     'l2_leaf_reg': [1, 2],  # L2-регуляризация
 }
-
-MODEL_CACHE_DIR = "model_cache"
-
-MODEL_PATH = "ml_model/catboost_model.cbm"
-
-# Пути для сохранения извлеченных признаков
-FEATURES_PATH = os.path.join(DATA, "features.csv")
-TARGET_PATH = os.path.join(DATA, 'resolution.csv')
-CAT_FEATURES_PATH = os.path.join(DATA, "cat_features.json")

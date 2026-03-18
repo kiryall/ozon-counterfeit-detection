@@ -1,12 +1,17 @@
+# utils/multimodal.py
 # Универсальный класс для объединения признаков из разных модальностей
 
 import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin
 
 import core.config as config
+from core.logging import setup_logging
 from utils.data_utils import ImageDataset
 from utils.features import ImageFeatureExtractor, SentenceEmbedder
 from utils.preprocessing import TabularPreprocessor, TextPreprocessor
+
+# Настройка логирования
+logger = setup_logging(log_file="multimodal.log", console=True, remove_file=True, logger_name="multimodal")
 
 class MultiModalFeatureUnion(BaseEstimator, TransformerMixin):
     """
@@ -16,11 +21,11 @@ class MultiModalFeatureUnion(BaseEstimator, TransformerMixin):
     - Визуальные признаки
     """
 
-    def __init__(self):
+    def __init__(self, model_name: str = "resnet18"):
         self.tabular = TabularPreprocessor()
         self.text = TextPreprocessor()
         self.text_embedder = SentenceEmbedder()
-        self.img_extractor = ImageFeatureExtractor()
+        self.img_extractor = ImageFeatureExtractor(model_name=model_name)
         self.image_dataset = None
         self.is_fitted = False
 
@@ -39,7 +44,7 @@ class MultiModalFeatureUnion(BaseEstimator, TransformerMixin):
         self.img_extractor.fit(self.image_dataset)
 
         self.is_fitted = True
-        print("Препроцессоры обучены")
+        logger.info("Препроцессоры обучены")
         return self
 
     def transform(self, df, y=None):
@@ -66,7 +71,7 @@ class MultiModalFeatureUnion(BaseEstimator, TransformerMixin):
             [tabular_features, text_features, img_features], axis=1
         )
 
-        print(f"Извлечены признаки: {comb_features.shape}")
+        logger.info(f"Извлечены признаки: {comb_features.shape}")
 
         return comb_features
 

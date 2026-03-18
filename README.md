@@ -1,78 +1,196 @@
-# Ozon Counterfeit Detection
+# 🚀 Ozon Counterfeit Detection
 
-ML pipeline for detecting counterfeit products on Ozon using multimodal data (tabular, text, images).
+Production-ready ML system for detecting counterfeit products using multimodal data (tabular + text + images).
 
-## Project Structure
-- `main.py` - основное FastAPI приложение
-- `api/` - API маршруты и эндпоинты
-- `core/` - конфигурация и исключения приложения
-- `models/` - Pydantic модели для валидации данных
-- `services/` - бизнес-логика приложения
-- `utils/` - утилиты для обработки данных и моделей
-- `traning/` - скрипты обучения модели
-- `notebooks/` - Jupyter ноутбуки для анализа и демонстраций
-- `data/` - данные (игнорируется git)
-- `ml_model/` - обученные модели (игнорируется git)
-- `submission/` - результаты сабмитов
-- `static/` - статические файлы (HTML, CSS, JS)
+## 💡 Problem
 
-## Quick Start
+Контрафакт на маркетплейсах:
+
+- снижает доверие пользователей
+- бьёт по брендам
+- создаёт финансовые потери
+
+Задача: автоматически определять подозрительные товары.
+
+## 🎯 Solution
+
+Мультимодальная ML-система, которая объединяет:
+
+- 📊 Tabular features (цена, рейтинг, отзывы)
+- 📝 Text embeddings (описания)
+- 🖼 Image embeddings (изображения)
+
+→ и предсказывает вероятность контрафакта.
+
+## 🧠 Key Features
+
+- ✅ Multimodal ML pipeline
+- ✅ REST API (FastAPI)
+- ✅ Batch inference
+- ✅ Feature extraction pipeline
+- ✅ Reproducible training
+- ✅ Logging & monitoring
+- ✅ Clean project structure (production-like)
+
+## 🏗️ Architecture (High-level)
+
+Client → FastAPI → Prediction Service → Feature Pipeline → Model → Response
+
+Detailed:
+```
+            ┌──────────────┐
+            │   Client     │
+            └──────┬───────┘
+                   │
+                   ▼
+        ┌──────────────────────┐
+        │      FastAPI API     │
+        └─────────┬────────────┘
+                  ▼
+        ┌──────────────────────┐
+        │ Prediction Service   │
+        └─────────┬────────────┘
+                  ▼
+        ┌──────────────────────┐
+        │ Feature Engineering  │
+        │ - text embeddings    │
+        │ - image embeddings   │
+        │ - tabular features   │
+        └─────────┬────────────┘
+                  ▼
+        ┌──────────────────────┐
+        │   ML Model (Fusion)  │
+        └─────────┬────────────┘
+                  ▼
+            Prediction
+```
+
+## 🤖 Model
+
+### Multimodal Architecture
+
+| Modality | Model |
+|----------|-------|
+| Tabular | CatBoost |
+| Text | Sentence Transformers |
+| Image | ResNet50 |
+
+Fusion strategy:
+- Early fusion (concatenation embeddings)
+- Feeding into gradient boosting
+
+## 📊 Metrics
+
+| Metric | Value |
+|--------|-------|
+| ROC-AUC | 0.9208 |
+| F1-score | 0.9399 |
+| Precision | 0.9416 |
+| Recall | 0.9384 |
+
+## ⚙️ Tech Stack
+
+- Python 3.11+
+- FastAPI
+- CatBoost
+- PyTorch / torchvision
+- Sentence Transformers
+- Pandas / NumPy / scikit-learn
+- uv (package manager)
+
+## 📁 Project Structure (Production-oriented)
+
+```
+api/        # REST API layer
+services/   # business logic
+models/     # schemas
+core/       # config, logging, exceptions
+utils/      # feature engineering
+training/   # model training
+ml_models/  # saved models
+```
+
+## 🔄 ML Pipeline
+
+### Training pipeline
+```
+raw data
+  ↓
+preprocessing
+  ↓
+feature extraction
+  ↓
+train/val split
+  ↓
+model training
+  ↓
+evaluation
+  ↓
+model saving
+```
+
+### Inference pipeline
+```
+input JSON
+  ↓
+validation
+  ↓
+feature extraction
+  ↓
+model inference
+  ↓
+response
+```
+
+## 🚀 Quick Start
+
 ```bash
 git clone https://github.com/kiryall/ml-ozon-counterfeit.git
-cd ml-ozon-counterfeit
-pip install -r requirements.txt
-python main.py
+cd kachectvo-zadachi-7054
+
+uv venv
+source .venv/bin/activate
+
+uv sync
+uv run python main.py
 ```
 
-## Структура проекта
-```app/
-├── main.py                     # Основное FastAPI приложение
-├── static/
-│   └── index.html              # HTML интерфейс приложения
-├── api/
-│   ├── __init__.py
-│   └── v1/
-│       ├── __init__.py
-│       ├── router.py           # Определение маршрутов API
-│       └── endpoints/
-│           ├── __init__.py
-│           ├── prediction.py   # Эндпоинты для предсказаний
-│           ├── url_prediction.py  # Эндпоинты для предсказаний по URL
-│           └── health.py       # Эндпоинты для проверки состояния
-├── models/
-│   ├── __init__.py
-│   ├── prediction.py           # Pydantic модели для валидации данных
-│   ├── url_input.py            # Модель для URL-входа
-│   └── response.py             # Модели ответов API
-├── services/
-│   ├── __init__.py
-│   ├── prediction_service.py   # Логика предсказания
-│   ├── model_loader.py         # Загрузка и управление моделью
-│   ├── scraping_service.py     # Веб-скрапинг
-│   └── llm_parser.py           # LLM-парсинг
-├── core/
-│   ├── __init__.py
-│   ├── config.py               # Конфигурация приложения
-│   └── exceptions.py           # Обработка исключений
-├── utils/
-│   ├── __init__.py
-│   ├── preprocessing.py        # Утилиты для предобработки
-│   ├── data_utils.py           # Утилиты для работы с данными
-│   ├── features.py             # Утилиты для извлечения признаков
-│   ├── model.py                # Модель для многомодального классификатора
-│   ├── multimodal.py           # Многомодальные функции
-│   └── preprocessing.py        # Утилиты для предобработки данных
-├── traning/
-│   ├── __init__.py
-│   └── train.py                # Скрипт обучения модели
-├── notebooks/
-│   ├── EDA.ipynb               # Исследовательский анализ данных
-│   └── main.ipynb              # Основной ноутбук с анализом
-├── data/
-│   └── (данные игнорируются git)
-├── ml_model/
-│   └── (обученные модели игнорируются git)
-├── submission/
-│   └── (файлы сабмитов)
-└── requirements.txt
+## 🔌 API
+
+### Predict
+- POST /api/v1/predict
+
+### Batch
+- POST /api/v1/batch
+
+### Health
+- GET /api/v1/health
+
+## 📦 Example Request
+
+```json
+{
+  "features": {
+    "price": 1500,
+    "rating": 4.5
+  },
+  "text": "Описание товара",
+  "image_url": "..."
+}
 ```
+
+## 🧪 Reproducibility
+
+- фиксированные зависимости (uv.lock)
+- конфиги (core/config.py)
+- разделение train/inference
+- сохранённые модели
+
+## 📈 Future Improvements
+
+- Add model versioning (MLflow)
+- Add monitoring (Prometheus + Grafana)
+- Improve fusion (deep multimodal model)
+- Add A/B testing
+- Optimize inference latency
+- Add async batch processing (Celery / Kafka)

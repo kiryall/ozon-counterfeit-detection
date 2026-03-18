@@ -8,6 +8,10 @@ from bs4 import BeautifulSoup
 from sklearn.impute import SimpleImputer
 
 import core.config as config
+from core.logging import setup_logging
+
+# Настройка логирования
+logger = setup_logging(log_file="preprocessing.log", console=True, remove_file=True, logger_name="preprocessing")
 
 
 class TabularPreprocessor:
@@ -40,7 +44,8 @@ class TabularPreprocessor:
 
     def _auto_detect_categorical(self, df):
         """
-        Автоматически определяет категориальные признаки по количеству уникальных значений
+        Автоматически определяет категориальные признаки по количеству уникальных значений.
+        Исключает признаки со словами 'count' в названии, так как это счетчики, а не категории.
         """
         potential_categorical = []
         num_columns = (
@@ -51,6 +56,9 @@ class TabularPreprocessor:
 
         for col in num_columns:
             if col in self.text_columns or col in [config.TARGET, config.ITEM]:
+                continue
+            # Пропускаем признаки, содержащие 'count' в названии - это счетчики, а не категории
+            if 'count' in col.lower():
                 continue
             # число уникальных значений
             unique_count = df[col].nunique()
@@ -73,7 +81,7 @@ class TabularPreprocessor:
         """Запоминает статистики для нормализации/кодирования."""
 
         df = self._add_indicators(df.copy())
-        df = df.set_index(config.ITEM)
+        df = df.set_index(config.ITEM, drop=True)
 
         # определение категориальных признаков
         auto_categorical = self._auto_detect_categorical(df)
@@ -94,8 +102,8 @@ class TabularPreprocessor:
             .tolist()
         )
 
-        print(f"Обнаружено категориальных признаков: {len(self.categorical_features)}")
-        print(f"Обнаружено числовых признаков: {len(self.numeric_features)}")
+        logger.info(f"Обнаружено категориальных признаков: {len(self.categorical_features)}")
+        logger.info(f"Обнаружено числовых признаков: {len(self.numeric_features)}")
 
         return self
 
@@ -103,24 +111,20 @@ class TabularPreprocessor:
         """Преобразует табличные признаки в массив."""
 
         df = self._add_indicators(df.copy())
-        df = df.set_index(config.ITEM)
+        df = df.set_index(config.ITEM, drop=True)
 
-        if self.numeric_features:
-            df[self.numeric_features] = df[self.numeric_features].fillna(0)
+        # защитимся от случая, если fit не вызывался
+        num_feats = [c for c in (self.numeric_features or []) if c in df.columns]
+        cat_feats = [c for c in (self.categorical_features or []) if c in df.columns]
 
-        if self.categorical_features:
-            for col in self.categorical_features:
-                # Заполняем пропуски
-                if df[col].isna().any():
-                    if df[col].dtype == "object":
-                        df[col] = df[col].fillna("missing")
-                    else:
-                        df[col] = df[col].fillna(999999)
+        if num_feats:
+            df[num_feats] = df[num_feats].fillna(0)
 
-                # Преобразуем в category codes
-                df[col] = df[col].astype("category").cat.codes
+        for col in cat_feats:
+            df[col] = df[col].fillna("missing")
+            df[col] = df[col].astype(str)
 
-        return df[self.numeric_features + self.categorical_features]
+        return df[num_feats + cat_feats]
 
     def fit_transform(self, X, y=None):
         return self.fit(X).transform(X)

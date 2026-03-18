@@ -1,7 +1,11 @@
 # services/model_loader.py
 from utils.model import MultiModalClassifier
 from core import config
+from core.logging import setup_logging
 import os
+
+ # Настройка логирования
+logger = setup_logging(log_file="model_loader.log", console=True, remove_file=True, logger_name="model_loader")
 
 def load_model(path: str):
     """
@@ -17,11 +21,34 @@ def load_model(path: str):
     return model.load_model(path)
 
 
+def load_multimodal_processor(path: str):
+    """
+    Загружает препроцессор для мультимодальных данных из указанного пути.
+    param path: Путь к файлу препроцессора (ожидается .pkl)
+    return: Загруженный препроцессор
+    """
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"Multimodal processor file not found: {path}")
+    
+    from utils.multimodal import MultiModalFeatureUnion
+    import joblib
+
+    try:
+        processor = joblib.load(path)
+        if not isinstance(processor, MultiModalFeatureUnion):
+            raise ValueError(f"Loaded object is not a MultiModalFeatureUnion: {type(processor)}")
+        return processor
+    except Exception as e:
+        logger.error(f"Error loading multimodal processor: {e}")
+        raise
+
+
 if __name__ == "__main__":
     try:
         model = load_model(config.MODEL_PATH)
-        print(f"Model successfully loaded from {config.MODEL_PATH}")
+        processor = load_multimodal_processor(config.MULTIMODAL_PROCESSOR_PATH)
+        logger.info(f"Model successfully loaded from {config.MODEL_PATH}")
     except FileNotFoundError as e:
-        print(f"File error: {e}")
+        logger.error(f"File error: {e}")
     except Exception as e:
-        print(f"Error loading model: {e}")
+        logger.error(f"Error loading model: {e}")
