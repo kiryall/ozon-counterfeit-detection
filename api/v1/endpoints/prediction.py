@@ -14,7 +14,7 @@ from services.prediction_service import PredictionProcessor
 # Настройка логирования
 logger = setup_logging(log_file="prediction.log", console=True, remove_file=True, logger_name="prediction")
 
-router = APIRouter(prefix="/predict", tags=["prediction"])
+router = APIRouter(tags=["prediction"])
 
 
 @router.post("/upload", response_model=PredictionResponse | BatchPredictionResponse)

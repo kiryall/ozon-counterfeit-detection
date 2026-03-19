@@ -101,11 +101,6 @@ def feature_extractor(data_path: str = config.DATA_CSV, sample: int | None = Non
     logger.info("Transforming TEST set")
     X_test_features = multimodal.transform(X_test)
 
-    # Не добавляем target к признакам - он будет использоваться отдельно
-    # X_train_features[config.TARGET] = y_train
-    # X_val_features[config.TARGET] = y_val
-    # X_test_features[config.TARGET] = y_test
-
     logger.info(
         f"Train features shape: {X_train_features.shape}, "
         f"Val features shape: {X_val_features.shape}, "

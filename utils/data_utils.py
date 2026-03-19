@@ -123,6 +123,56 @@ def train_val_test_split(
     return train_df, val_df, test_df, y_train, y_test, y_val
 
 
+class BytesImageDataset(Dataset):
+    """Класс для работы с изображениями в виде байтов.
+
+    Наследует Dataset из PyTorch для использования с DataLoader.
+    Принимает словарь с байтами изображений вместо загрузки из файловой системы.
+    """
+
+    def __init__(self, df, image_bytes_dict: dict, transform=None, img_size=config.IMG_SIZE):
+        """Инициализация датасета с байтами изображений.
+
+        Args:
+            df: DataFrame с идентификаторами изображений.
+            image_bytes_dict: Словарь {item_id: bytes} с изображениями.
+            transform: Трансформации из torchvision (необязательно).
+            img_size: Размер изображения (кортеж).
+        """
+        self.df = df
+        self.image_bytes_dict = image_bytes_dict
+        self.transform = transform
+        self.img_size = img_size
+
+    def __len__(self):
+        return len(self.df)
+
+    def __getitem__(self, index):
+        row = self.df.iloc[index]
+        img_id = row[config.ITEM]
+
+        label = row.get("resolution", -1)
+
+        # Пробуем получить изображение из байтов
+        if img_id in self.image_bytes_dict:
+            try:
+                from io import BytesIO
+                image = Image.open(BytesIO(self.image_bytes_dict[img_id])).convert("RGB")
+            except Exception as e:
+                print(f"Не удалось прочитать изображение для {img_id}: {e}")
+                image = Image.fromarray(np.zeros((*self.img_size, 3), dtype=np.uint8))
+        else:
+            # Если нет в словаре - создаём пустое изображение
+            image = Image.fromarray(np.zeros((*self.img_size, 3), dtype=np.uint8))
+
+        # аугментации
+        if self.transform:
+            image = self.transform(image)
+
+        # Возвращаем img_id как список для корректной работы DataLoader
+        return image, label, [img_id]
+
+
 class ImageDataset(Dataset):
     """Класс для загрузки изображений из датасета.
 
@@ -170,7 +220,7 @@ class ImageDataset(Dataset):
         if self.transform:
             image = self.transform(image)
 
-        return image, label, img_id
+        return image, label, [img_id]
 
 
 def preview_batch(loader, num_img=8, num_row=4):

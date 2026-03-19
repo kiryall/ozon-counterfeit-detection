@@ -11,7 +11,7 @@ from core.logging import setup_logging
 # Настройка логирования
 logger = setup_logging(log_file="batch_prediction.log", console=True, remove_file=True, logger_name="batch_prediction")
 
-router = APIRouter(prefix="/predict", tags=["prediction"])
+router = APIRouter(tags=["prediction"])
 
 
 @router.post("/upload-batch")

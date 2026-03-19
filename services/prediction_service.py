@@ -1,4 +1,7 @@
 # services/prediction_service.py
+
+import json
+import os
 from typing import List
 from pandas import DataFrame
 from models.prediction import (
@@ -7,6 +10,7 @@ from models.prediction import (
     BatchPredictionResponse,
     ImageProcessor
 )
+from core import config
 from core.logging import setup_logging
 
 # Настройка логирования
@@ -19,15 +23,48 @@ class PredictionProcessor:
     Предоставляет методы для одиночного и пакетного предсказания.
     """
 
-    def __init__(self, model, multimodal_processor):
+    def __init__(self, model, multimodal_processor, cat_features_path: str = None):
         """Инициализация процессора предсказаний.
 
         Args:
             model: Обученный классификатор MultiModalClassifier.
             multimodal_processor: Процессор MultiModalFeatureUnion для извлечения признаков.
+            cat_features_path: Путь к файлу с категориальными признаками (cat_features.json).
         """
         self.model = model
         self.multimodal_processor = multimodal_processor
+        
+        # Загружаем категориальные признаки из JSON
+        self.cat_features = []
+        cat_path = cat_features_path or config.CAT_FEATURES_PATH
+        if cat_path and os.path.exists(cat_path):
+            with open(cat_path, 'r', encoding='utf-8') as f:
+                self.cat_features = json.load(f)
+            logger.info(f"Загружено {len(self.cat_features)} категориальных признаков из {cat_path}")
+        else:
+            logger.warning(f"Файл cat_features не найден: {cat_path}")
+
+    def _prepare_features(self, features):
+        """Подготовка признаков перед предсказанием.
+        
+        Преобразует NaN значения в категориальных признаках в строки.
+        
+        Args:
+            features: DataFrame с признаками.
+            
+        Returns:
+            DataFrame с подготовленными признаками.
+        """
+
+        features_prepared = features.copy()
+        
+        # Обрабатываем категориальные признаки
+        for col in self.cat_features:
+            if col in features_prepared.columns:
+                # Заполняем NaN и преобразуем в строку
+                features_prepared[col] = features_prepared[col].fillna("missing").astype(str)
+        
+        return features_prepared
 
     def predict_single(self, image_bytes: bytes, dataframe_row: dict, image_filename: str = None) -> PredictionResponse:
         """Одиночное предсказание: одно изображение и одна строка данных.
@@ -53,11 +90,22 @@ class PredictionProcessor:
             if not ImageProcessor.validate_image_format(image):
                 raise ValueError("Invalid image format")
 
+            # Get item_id for image mapping
+            item_id = dataframe_row.get('item_id', None)
+            if item_id is None:
+                raise ValueError("dataframe_row must contain 'item_id'")
+
             # Create single-row dataframe
             df = DataFrame([dataframe_row])
 
-            # Extract features using multimodal processor
-            features = self.multimodal_processor.transform(df)
+            # Create image bytes dictionary for multimodal processor
+            image_bytes_dict = {item_id: image_bytes}
+
+            # Extract features using multimodal processor with bytes
+            features = self.multimodal_processor.transform_with_bytes(df, image_bytes_dict)
+
+            # Prepare features (handle NaN in categorical features)
+            features = self._prepare_features(features)
 
             # Get prediction probabilities
             probas = self.model.predict_proba(features)
@@ -67,8 +115,6 @@ class PredictionProcessor:
             confidence = float(probas[0][pred_class])
 
             prediction = PredictionType.FAKE if pred_class == 1 else PredictionType.REAL
-
-            item_id = dataframe_row.get('item_id', None)
 
             logger.info(f"Single prediction completed: {prediction} with confidence {confidence:.4f} for item_id: {item_id}")
 
@@ -106,16 +152,27 @@ class PredictionProcessor:
             if len(image_bytes_list) != len(dataframe):
                 raise ValueError(f"Number of images ({len(image_bytes_list)}) must match number of rows ({len(dataframe)})")
 
-            # Load and process images
+            # Validate all images and create bytes dictionary
+            item_ids = dataframe['item_id'].tolist() if 'item_id' in dataframe.columns else None
+            if item_ids is None:
+                raise ValueError("DataFrame must contain 'item_id' column")
+
+            image_bytes_dict = {}
             images = []
-            for image_bytes in image_bytes_list:
+            for i, image_bytes in enumerate(image_bytes_list):
                 image = ImageProcessor.load_image_from_bytes(image_bytes)
                 if not ImageProcessor.validate_image_format(image):
-                    raise ValueError("Invalid image format in batch")
+                    raise ValueError(f"Invalid image format at index {i}")
                 images.append(image)
+                # Map by item_id
+                if item_ids[i] is not None:
+                    image_bytes_dict[item_ids[i]] = image_bytes
 
-            # Extract features using multimodal processor
-            features = self.multimodal_processor.transform(dataframe)
+            # Extract features using multimodal processor with bytes
+            features = self.multimodal_processor.transform_with_bytes(dataframe, image_bytes_dict)
+
+            # Prepare features (handle NaN in categorical features)
+            features = self._prepare_features(features)
 
             # Get prediction probabilities
             probas = self.model.predict_proba(features)
@@ -129,8 +186,6 @@ class PredictionProcessor:
                 prediction = PredictionType.FAKE if pred_class == 1 else PredictionType.REAL
                 predictions.append(prediction)
                 confidences.append(confidence)
-
-            item_ids = dataframe.get('item_id', []).tolist() if 'item_id' in dataframe.columns else None
 
             logger.info(f"Batch prediction completed for {len(predictions)} items")
 

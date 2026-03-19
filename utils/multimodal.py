@@ -6,7 +6,7 @@ from sklearn.base import BaseEstimator, TransformerMixin
 
 import core.config as config
 from core.logging import setup_logging
-from utils.data_utils import ImageDataset
+from utils.data_utils import ImageDataset, BytesImageDataset
 from utils.features import ImageFeatureExtractor, SentenceEmbedder
 from utils.preprocessing import TabularPreprocessor, TextPreprocessor
 
@@ -83,6 +83,48 @@ class MultiModalFeatureUnion(BaseEstimator, TransformerMixin):
         )
 
         logger.info(f"Извлечены признаки: {comb_features.shape}")
+
+        return comb_features
+
+    def transform_with_bytes(self, df, image_bytes_dict: dict, y=None):
+        """Извлечение и объединение признаков из всех модальностей с использованием bytes изображений.
+
+        Выполняет преобразование данных с использованием всех
+        препроцессоров и объединяет признаки в единый DataFrame.
+        В отличие от transform() принимает словарь с байтами изображений
+        вместо загрузки из файловой системы.
+
+        Args:
+            df: DataFrame с данными для преобразования.
+            image_bytes_dict: Словарь {item_id: bytes} с изображениями.
+            y: Целевая переменная (не используется).
+
+        Returns:
+            DataFrame с объединенными признаками из всех модальностей.
+
+        Raises:
+            ValueError: Препроцессоры не обучены (не вызван fit()).
+        """
+        if not self.is_fitted:
+            raise ValueError("Сначала вызовите fit()!")
+        
+        # предобработка текста
+        preprocessed_text = self.text.transform(df)
+        
+        # создание Dataset с байтами изображений
+        image_dataset = BytesImageDataset(df, image_bytes_dict, transform=config.TRANSFORMS)
+
+        # извлечение признаков
+        tabular_features = self.tabular.transform(df)
+        text_features = self.text_embedder.transform(preprocessed_text)
+        img_features = self.img_extractor.transform(image_dataset)
+
+        # объединение в один датафрейм
+        comb_features = pd.concat(
+            [tabular_features, text_features, img_features], axis=1
+        )
+
+        logger.info(f"Извлечены признаки (из bytes): {comb_features.shape}")
 
         return comb_features
 

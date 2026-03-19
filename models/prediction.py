@@ -1,5 +1,5 @@
 # models/prediction.py
-from pandas import DataFrame
+import pandas as pd
 from pydantic import BaseModel, Field
 from typing import Optional, List
 from enum import Enum
@@ -44,7 +44,7 @@ class PredictionResponse(BaseModel):
     """
     prediction: PredictionType = Field(..., description="Результат предсказания: FAKE или REAL")
     confidence: float = Field(..., ge=0, le=1, description="Оценка уверенности (0-1)")
-    item_id: Optional[str] = Field(None, description="Идентификатор объекта из данных")
+    item_id: Optional[str | int] = Field(None, description="Идентификатор объекта из данных")
 
 
 class BatchPredictionResponse(BaseModel):
@@ -125,7 +125,7 @@ class DataFrameProcessor:
     """
 
     @staticmethod
-    def load_dataframe_from_bytes(file_bytes: bytes, filename: str) -> DataFrame:
+    def load_dataframe_from_bytes(file_bytes: bytes, filename: str) -> pd.DataFrame:
         """Загрузка DataFrame из загруженного файла.
 
         Поддерживает форматы CSV и Excel.
@@ -142,13 +142,13 @@ class DataFrameProcessor:
         """
         try:
             if filename.endswith('.csv'):
-                df = DataFrame.from_csv(BytesIO(file_bytes), index=False)
+                df = pd.read_csv(BytesIO(file_bytes), index_col=0)
                 # Handle case where pandas reads first column as index
                 if df.index.name is not None:
                     df = df.reset_index()
                 return df
             elif filename.endswith(('.xlsx', '.xls')):
-                df = DataFrame.from_excel(BytesIO(file_bytes))
+                df = pd.read_excel(BytesIO(file_bytes))
                 return df
             else:
                 raise ValueError(f"Unsupported file format: {filename}")
@@ -156,7 +156,7 @@ class DataFrameProcessor:
             raise ValueError(f"Failed to load dataframe from file: {str(e)}")
 
     @staticmethod
-    def validate_dataframe(df: DataFrame) -> bool:
+    def validate_dataframe(df: pd.DataFrame) -> bool:
         """Валидация структуры DataFrame.
 
         Проверяет, что DataFrame не пустой и содержит строки.
@@ -177,7 +177,7 @@ class DataFrameProcessor:
         return True
 
     @staticmethod
-    def get_row_as_dict(df: DataFrame, index: int) -> dict:
+    def get_row_as_dict(df: pd.DataFrame, index: int) -> dict:
         """Получение одной строки в виде словаря.
 
         Args:

@@ -25,7 +25,7 @@ venv/
 *.joblib
 *.sav
 *.png
-*.pkl
+*.cbm
 
 # Модели
 *.model

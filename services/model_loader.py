@@ -61,6 +61,7 @@ def load_multimodal_processor(path: str):
 
 
 if __name__ == "__main__":
+    # Тестирование загрузки модели и препроцессора
     try:
         model = load_model(config.MODEL_PATH)
         processor = load_multimodal_processor(config.MULTIMODAL_PROCESSOR_PATH)

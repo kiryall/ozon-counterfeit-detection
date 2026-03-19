@@ -127,7 +127,14 @@ class ImageFeatureExtractor(BaseEstimator, TransformerMixin):
                 feats = feats.view(feats.size(0), -1).cpu().numpy()
                 features.append(feats)
 
-                ids_list = ids.tolist()
+                # Обработка ids: поддержка различных типов (list, tuple, tensor, scalar)
+                if isinstance(ids, (list, tuple)):
+                    ids_list = list(ids)
+                elif hasattr(ids, 'tolist'):  # torch.Tensor
+                    ids_list = ids.tolist()
+                else:
+                    ids_list = [ids]
+                
                 all_ids.extend(ids_list)
 
                 pbar.update(1)
