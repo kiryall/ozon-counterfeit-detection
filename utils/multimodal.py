@@ -48,10 +48,21 @@ class MultiModalFeatureUnion(BaseEstimator, TransformerMixin):
         return self
 
     def transform(self, df, y=None):
-        """
-        Извлекает и объединяет признаки из всех модальностей
-        """
+        """Извлечение и объединение признаков из всех модальностей.
 
+        Выполняет преобразование данных с использованием всех
+        препроцессоров и объединяет признаки в единый DataFrame.
+
+        Args:
+            df: DataFrame с данными для преобразования.
+            y: Целевая переменная (не используется).
+
+        Returns:
+            DataFrame с объединенными признаками из всех модальностей.
+
+        Raises:
+            ValueError: Препроцессоры не обучены (не вызван fit()).
+        """
         if not self.is_fitted:
             raise ValueError("Сначала вызовите fit()!")
         
@@ -79,8 +90,12 @@ class MultiModalFeatureUnion(BaseEstimator, TransformerMixin):
         return self.fit(X).transform(X)
 
     def get_features(self):
-        """
-        Возвращает список категориальных фич
+        """Получение информации об извлеченных признаках.
+
+        Returns:
+            Словарь с категориальными и числовыми признаками:
+            - Category: Список категориальных признаков.
+            - Numeric: Список числовых признаков (изображения и текст).
         """
         return {
             "Category": self.tabular.get_cat_features(),

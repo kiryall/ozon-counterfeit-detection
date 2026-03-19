@@ -15,13 +15,13 @@ logger = setup_logging(log_file="preprocessing.log", console=True, remove_file=T
 
 
 class TabularPreprocessor:
-    """
-    Класс для предобработки табличных данных.
+    """Класс для предобработки табличных данных.
+
     Предоставляет функционал для:
-    - Определения типов признаков
-    - Обработки пропущенных значений
-    - Преобразования типов данных
-    - Автоматического определения категориальных признаков
+    - Определения типов признаков.
+    - Обработки пропущенных значений.
+    - Преобразования типов данных.
+    - Автоматического определения категориальных признаков.
     """
 
     def __init__(
@@ -35,6 +35,14 @@ class TabularPreprocessor:
         ],
         max_unique_categorical=50,
     ):
+        """Инициализация препроцессора табличных данных.
+
+        Args:
+            img_dir: Путь к директории с изображениями.
+            text_columns: Список текстовых колонок для исключения.
+            max_unique_categorical: Максимальное количество уникальных
+                значений для автоматического определения категориального признака.
+        """
         self.numeric_features = None
         self.categorical_features = None
         self.img_dir = img_dir
@@ -43,9 +51,17 @@ class TabularPreprocessor:
         self.auto_detected_categorical = []
 
     def _auto_detect_categorical(self, df):
-        """
-        Автоматически определяет категориальные признаки по количеству уникальных значений.
-        Исключает признаки со словами 'count' в названии, так как это счетчики, а не категории.
+        """Автоматическое определение категориальных признаков.
+
+        Определяет категориальные признаки по количеству уникальных значений.
+        Исключает признаки со словом 'count' в названии, так как это
+        счетчики, а не категории.
+
+        Args:
+            df: DataFrame для анализа.
+
+        Returns:
+            Список названий потенциально категориальных колонок.
         """
         potential_categorical = []
         num_columns = (
@@ -78,8 +94,16 @@ class TabularPreprocessor:
         return df
 
     def fit(self, df):
-        """Запоминает статистики для нормализации/кодирования."""
+        """Запоминание статистик для нормализации и кодирования.
 
+        Определяет категориальные и числовые признаки в данных.
+
+        Args:
+            df: DataFrame для анализа.
+
+        Returns:
+            self.
+        """
         df = self._add_indicators(df.copy())
         df = df.set_index(config.ITEM, drop=True)
 
@@ -108,8 +132,17 @@ class TabularPreprocessor:
         return self
 
     def transform(self, df):
-        """Преобразует табличные признаки в массив."""
+        """Преобразование табличных признаков.
 
+        Заполняет пропущенные значения и преобразует данные
+        в формат, пригодный для модели.
+
+        Args:
+            df: DataFrame для преобразования.
+
+        Returns:
+            DataFrame с преобразованными признаками.
+        """
         df = self._add_indicators(df.copy())
         df = df.set_index(config.ITEM, drop=True)
 
@@ -130,7 +163,15 @@ class TabularPreprocessor:
         return self.fit(X).transform(X)
 
     def get_feature_info(self):
-        """Возвращает информацию о признаках для отладки"""
+        """Получение информации о признаках для отладки.
+
+        Returns:
+            Словарь с информацией о признаках:
+            - numeric_features: Список числовых признаков.
+            - categorical_features: Список категориальных признаков.
+            - auto_detected_categorical: Автоматически определенные категориальные признаки.
+            - total_features: Общее количество признаков.
+        """
         return {
             "numeric_features": self.numeric_features,
             "categorical_features": self.categorical_features,
@@ -140,20 +181,22 @@ class TabularPreprocessor:
         }
 
     def get_cat_features(self):
-        """Возвращает список категориальных фич"""
+        """Получение списка категориальных признаков.
+
+        Returns:
+            Список категориальных признаков.
+        """
         return self.categorical_features
 
 
 class TextPreprocessor:
-    """
-    Класс для предобработки текстовых данных в датафрейме.
-    Предоставляет функционал для очистки текста и обработки пропущенных значений.
+    """Класс для предобработки текстовых данных в DataFrame.
 
-    Основные возможности:
-    - Удаление HTML-тегов
-    - Очистка от специальных символов
-    - Приведение к нижнему регистру
-    - Замена пропущенных значений
+    Предоставляет функционал для:
+    - Удаления HTML-тегов.
+    - Очистки от специальных символов.
+    - Приведения к нижнему регистру.
+    - Замены пропущенных значений.
     """
 
     def __init__(
@@ -165,6 +208,11 @@ class TextPreprocessor:
             "commercial_type_name4",
         ],
     ):
+        """Инициализация текстового препроцессора.
+
+        Args:
+            text_columns: Список колонок с текстовыми данными.
+        """
         self.str = None
         self.imputer = SimpleImputer(
             strategy="constant", fill_value="missing_discription"
@@ -172,19 +220,45 @@ class TextPreprocessor:
         self.text_columns = text_columns
 
     def _clear_text(self, text, pattern=r"[^a-zA-Zа-яА-Я0-9]"):
-        """
-        Функция для очистки текста.
+        """Очистка текста от HTML-тегов и специальных символов.
+
+        Args:
+            text: Текст для очистки.
+            pattern: Регулярное выражение для поиска символов на удаление.
+
+        Returns:
+            Очищенный текст в нижнем регистре.
         """
         self.str = BeautifulSoup(text, "html.parser").get_text()
         self.str = " ".join(re.sub(pattern, " ", self.str).split()).lower()
         return self.str
 
     def fit(self, df):
+        """Обучение препроцессора на данных.
+
+        Подгоняет imputer для заполнения пропущенных значений.
+
+        Args:
+            df: DataFrame с текстовыми данными.
+
+        Returns:
+            self.
+        """
         self.imputer.fit(df[self.text_columns])
         return self
 
     def transform(self, df):
-        # обработка колонок с описаниями
+        """Преобразование текстовых данных.
+
+        Обрабатывает текстовые колонки: заполняет пропущенные значения,
+        объединяет описания и очищает текст.
+
+        Args:
+            df: DataFrame с текстовыми данными.
+
+        Returns:
+            DataFrame с обработанным текстом.
+        """
         df[self.text_columns] = self.imputer.transform(df[self.text_columns])
         # объединение всех описаний в одно
         df[config.TEXT_COLUMN] = df[self.text_columns].apply(

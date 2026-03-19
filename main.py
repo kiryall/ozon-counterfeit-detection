@@ -21,6 +21,21 @@ multimodal_processor = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """Управление жизненным циклом приложения FastAPI.
+
+    Загружает модель и мультимодальный процессор при запуске приложения
+    и освобождает ресурсы при завершении работы.
+
+    Args:
+        app: Экземпляр приложения FastAPI.
+
+    Yields:
+        Управление передается приложению.
+
+    Raises:
+        FileNotFoundError: Файл модели не найден.
+        Exception: Ошибка загрузки модели.
+    """
     global model, multimodal_processor
     # Загрузка модели при запуске приложения
     try:
@@ -60,7 +75,18 @@ app.include_router(api_router, prefix="/api/v1")
 async def index(
     request: Request,
     result: str | None = None):
+    """Отображение главной страницы с формой ввода URL.
 
+    Возвращает HTML-шаблон главной страницы с формой для загрузки
+    изображения и данных для предсказания.
+
+    Args:
+        request: Объект запроса FastAPI.
+        result: Результат предсказания для отображения на странице.
+
+    Returns:
+        HTML-ответ с шаблоном страницы.
+    """
     logger.info("Запрос главной страницы")
     return templates.TemplateResponse("index.html", {"request": request, "result": result})
 

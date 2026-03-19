@@ -19,15 +19,22 @@ async def predict_batch_multiple(
     images: list[UploadFile] = File(..., description="Uploaded image files"),
     dataframe: UploadFile = File(..., description="Uploaded CSV/Excel file"),
 ) -> BatchPredictionResponse:
-    """
-    Batch prediction endpoint for multiple images and dataframe rows.
+    """Эндпоинт для пакетного предсказания на нескольких изображениях и данных.
+
+    Принимает список изображений и CSV/Excel файл с данными, выполняет
+    предсказание для каждой пары (изображение, строка данных).
 
     Args:
-        images: List of uploaded image files
-        dataframe: Uploaded CSV or Excel file with data rows
+        images: Список загруженных файлов изображений.
+        dataframe: Загруженный CSV или Excel файл с данными строк.
 
     Returns:
-        BatchPredictionResponse with predictions for all rows
+        BatchPredictionResponse с предсказаниями для всех строк.
+
+    Raises:
+        HTTPException 503: Модель не загружена.
+        HTTPException 400: Ошибка валидации данных.
+        HTTPException 500: Внутренняя ошибка сервера.
     """
     from main import model, multimodal_processor
 

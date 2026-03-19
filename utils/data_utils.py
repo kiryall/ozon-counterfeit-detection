@@ -21,8 +21,13 @@ import core.config as config
 
 
 def to_snake_case(name: str) -> str:
-    """
-    Convert CamelCase / camelCase → snake_case
+    """Преобразование имени из CamelCase / camelCase в snake_case.
+
+    Args:
+        name: Строка для преобразования.
+
+    Returns:
+        Строка в формате snake_case.
     """
     if not isinstance(name, str):
         return name
@@ -33,16 +38,20 @@ def to_snake_case(name: str) -> str:
     return name.lower()
 
 def load_data(path: str):
-    """
-    Загружает CSV. Преобразует названия столбцов в snake_case.
+    """Загрузка данных из CSV файла.
+
+    Загружает CSV файл и преобразует названия столбцов в snake_case.
 
     Args:
-        path (str): путь к data.csv
+        path: Путь к файлу data.csv.
 
     Returns:
-        pd.DataFrame: датафрейм
-    """
+        DataFrame с загруженными данными.
 
+    Raises:
+        FileNotFoundError: Файл не найден.
+        ValueError: Ошибка при преобразовании названий столбцов.
+    """
     path = Path(path)
 
     if not path.exists():
@@ -67,20 +76,26 @@ def load_data(path: str):
 def train_val_test_split(
     df: pd.DataFrame, test_size: float, val_size: float, random_state: int
 ):
-    """
-    Делает стратифицированный train/valid/test split.
+    """Разделение данных на тренировочную, валидационную и тестовую выборки.
+
+    Выполняет стратифицированное разделение данных с сохранением
+    пропорций классов.
 
     Args:
-        df (pd.DataFrame): исходные данные
-        test_size (float): доля тестовой выборки
-        val_size (float): доля валидационной выборки
-        random_state (int): random seed
+        df: Исходные данные.
+        test_size: Доля тестовой выборки.
+        val_size: Доля валидационной выборки.
+        random_state: Зерно случайности для воспроизводимости.
 
     Returns:
-        (pd.DataFrame, pd.DataFrame): train_df, val_df, test_df
+        Кортеж из:
+        - train_df: Тренировочный DataFrame.
+        - val_df: Валидационный DataFrame.
+        - test_df: Тестовый DataFrame.
+        - y_train: Целевая переменная тренировочной выборки.
+        - y_test: Целевая переменная тестовой выборки.
+        - y_val: Целевая переменная валидационной выборки.
     """
-
-    # относительный размер валидационной выборки
     val_relative_size = val_size / (1 - test_size)
 
     # X, y
@@ -109,17 +124,20 @@ def train_val_test_split(
 
 
 class ImageDataset(Dataset):
-    """
-    Класс для загрузки изображений.
+    """Класс для загрузки изображений из датасета.
+
+    Наследует Dataset из PyTorch для использования с DataLoader.
+    Загружает изображения и метки из указанной директории.
     """
 
     def __init__(self, df, img_dir, transform=None, img_size=config.IMG_SIZE):
-        """
+        """Инициализация датасета изображений.
+
         Args:
-            df (pd.DataFrame): таблица с id
-            img_dir (str): путь к папке с изображениями
-            transform (callable): torchvision трансформации
-            img_size (tuple): размер изображения
+            df: DataFrame с идентификаторами изображений.
+            img_dir: Путь к папке с изображениями.
+            transform: Трансформации из torchvision (необязательно).
+            img_size: Размер изображения (кортеж).
         """
         self.df = df
         self.img_dir = img_dir
@@ -156,11 +174,14 @@ class ImageDataset(Dataset):
 
 
 def preview_batch(loader, num_img=8, num_row=4):
-    """
-    Функция для визуализации батча даталоадера
+    """Визуализация батча из даталоадера.
+
+    Отображает сетку изображений из батча для проверки данных.
 
     Args:
-        loader
+        loader: DataLoader с изображениями.
+        num_img: Количество изображений для отображения.
+        num_row: Количество изображений в строке.
     """
     images, label, _ = next(iter(loader))
 
@@ -173,10 +194,17 @@ def preview_batch(loader, num_img=8, num_row=4):
 
 
 def resize_save_img(args):
-    """
-    функция для ресайза и сохранения изображения
-    """
+    """Изменение размера и сохранение одного изображения.
 
+    Загружает изображение, изменяет его размер до указанного
+    и сохраняет в целевую папку.
+
+    Args:
+        args: Кортеж из (исходный_путь, целевой_путь, размер_изображения).
+
+    Returns:
+        True при успешном сохранении, False при ошибке.
+    """
     source_path, target_path, img_size = args
 
     try:
@@ -195,16 +223,20 @@ def resize_save_img(args):
 def create_resized_dataset(
     source_path, target_path, img_size=config.IMG_SIZE, num_workers=8
 ):
-    """
-    Создает уменьшенную копию всего датасета
+    """Создание уменьшенной копии всего датасета изображений.
+
+    Рекурсивно обрабатывает все PNG изображения в исходной папке,
+    изменяет их размер и сохраняет в целевую папку.
 
     Args:
-        source_dir: исходная папка с изображениями
-        target_dir: целевая папка для уменьшенных копий
-        img_size: целевой размер
-        num_workers: количество процессов
-    """
+        source_path: Путь к исходной папке с изображениями.
+        target_path: Путь к целевой папке для уменьшенных копий.
+        img_size: Целевой размер изображений.
+        num_workers: Количество процессов для параллельной обработки.
 
+    Returns:
+        Количество успешно обработанных изображений.
+    """
     source_path = Path(source_path)
     target_path = Path(target_path)
 

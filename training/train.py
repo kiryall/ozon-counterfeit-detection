@@ -19,13 +19,27 @@ def load_train_data(
     test_name: str = config.TEST_FEATURES_PATH,
     cat_features_path: str = config.CAT_FEATURES_PATH
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.Series, pd.Series, pd.Series, list[str]]:
+    """Загрузка данных для обучения модели.
+
+    Загружает тренировочные, валидационные и тестовые данные из CSV файлов,
+    а также список категориальных признаков.
+
+    Args:
+        train_name: Путь к файлу с тренировочными признаками.
+        val_name: Путь к файлу с валидационными признаками.
+        test_name: Путь к файлу с тестовыми признаками.
+        cat_features_path: Путь к файлу со списком категориальных признаков.
+
+    Returns:
+        Кортеж из:
+        - X_train: Тренировочные данные.
+        - X_val: Валидационные данные.
+        - X_test: Тестовые данные.
+        - y_train: Целевая переменная тренировочной выборки.
+        - y_val: Целевая переменная валидационной выборки.
+        - y_test: Целевая переменная тестовой выборки.
+        - cat_features: Список категориальных признаков.
     """
-    Функция для загрузки данных для обучения модели
-    :param data_path: Путь к файлу с фичами
-    :param cat_features_path: Путь к файлу с списком категориальных признаков
-    :return: Разделенные на трейн, валид, тест данные и список категориальных признаков
-    """
-    
     X_train = pd.read_csv(train_name)
     X_val = pd.read_csv(val_name)
     X_test = pd.read_csv(test_name)
@@ -50,16 +64,21 @@ def load_train_data(
 
 
 def train(X_train, y_train, X_val, y_val, cat_features):
-    """
-    Функция для обучения модели
+    """Обучение модели на тренировочных данных.
 
-    :param X_train: Обучающие данные
-    :param y_train: Целевая переменная обучающей выборки
-    :param X_val: Валидационные данные
-    :param y_val: Целевая переменная валидационной выборки
-    :param cat_features: Список категориальных признаков
+    Обучает мультимодальный классификатор на переданных данных
+    и сохраняет модель в файл.
+
+    Args:
+        X_train: Обучающие данные (признаки).
+        y_train: Целевая переменная обучающей выборки.
+        X_val: Валидационные данные (признаки).
+        y_val: Целевая переменная валидационной выборки.
+        cat_features: Список категориальных признаков.
+
+    Raises:
+        Exception: Ошибка при обучении или сохранении модели.
     """
-    # TODO: ИСПРАВИТЬ
     try:
         # ОБУЧЕНИЕ МОДЕЛИ
         logger.info("Training model...")
@@ -78,14 +97,24 @@ def train(X_train, y_train, X_val, y_val, cat_features):
         raise
 
 def metrics_calculation(y_true, y_pred, y_pred_proba) -> dict:
+    """Вычисление метрик качества модели.
+
+    Рассчитывает основные метрики классификации на основе
+    истинных и предсказанных значений.
+
+    Args:
+        y_true: Истинные метки классов.
+        y_pred: Предсказанные метки классов.
+        y_pred_proba: Предсказанные вероятности положительного класса.
+
+    Returns:
+        Словарь с метриками:
+        - f1: F1-мера.
+        - accuracy: Точность.
+        - precision: Полнота.
+        - recall: Полнота (recall).
+        - roc_auc: ROC-AUC.
     """
-    Функция для вычисления метрик качества модели
-    :param y_true: Истинные метки классов
-    :param y_pred: Предсказанные метки классов
-    :param y_pred_proba: Предсказанные вероятности положительного класса
-    :return: Словарь с метриками
-    """
-    # Определим average_method до использования
     average_method = "weighted"
     
     f1 = f1_score(y_true, y_pred, average=average_method)
@@ -140,7 +169,7 @@ def main():
         logger.info(metrics)
 
         import matplotlib.pyplot as plt
-        from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+        from sklearn.metrics import ConfusionMatrixDisplay
 
         # Проверяем, есть ли доступ к графическому интерфейсу
         import platform

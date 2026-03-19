@@ -17,13 +17,29 @@ logger = setup_logging(log_file="features.log", console=True, remove_file=True, 
 
 
 def ensure_parent_dir(path: str):
+    """Создание родительской директории для указанного пути.
+
+    Создает все необходимые родительские директории, если они не существуют.
+
+    Args:
+        path: Путь к файлу или директории.
+    """
     parent = Path(path).resolve().parent
     parent.mkdir(parents=True, exist_ok=True)
 
 
 def save_features(df: DataFrame, path: str):
-    """
-    Save DataFrame to CSV; ensure parent dir exists and log errors.
+    """Сохранение DataFrame в CSV файл.
+
+    Сохраняет DataFrame в файл по указанному пути, предварительно
+    создавая необходимые директории.
+
+    Args:
+        df: DataFrame для сохранения.
+        path: Путь к файлу для сохранения.
+
+    Raises:
+        Exception: Ошибка при сохранении файла.
     """
     try:
         ensure_parent_dir(path)
@@ -35,13 +51,19 @@ def save_features(df: DataFrame, path: str):
 
 
 def feature_extractor(data_path: str = config.DATA_CSV, sample: int | None = None, model_name: str = "resnet18"):
-    """
-    Функция для извлечения фич тренировочных данных
-    :param data_path: Путь к файлу с данными
-    :param sample: Количество строк для извлечения (для тестирования)
-    :param model_name: Название модели для извлечения признаков изображений
-    """
+    """Извлечение признаков из тренировочных данных.
 
+    Выполняет полный пайплайн извлечения признаков:
+    1. Загружает данные из CSV.
+    2. Разделяет на тренировочную, валидационную и тестовую выборки.
+    3. Извлекает мультимодальные признаки (табличные, текстовые, визуальные).
+    4. Сохраняет признаки и процессор в файлы.
+
+    Args:
+        data_path: Путь к файлу с данными.
+        sample: Количество строк для извлечения (для тестирования).
+        model_name: Название модели для извлечения признаков изображений.
+    """
     logger.info(
         f"Feature pipeline started. Data path: {data_path}, Sample size: {sample}, Model name: {model_name}"
     )

@@ -14,32 +14,38 @@ logger = setup_logging(log_file="prediction.log", console=True, remove_file=True
 
 
 class PredictionProcessor:
-    """Класс для предсказания"""
+    """Класс для выполнения предсказаний на основе модели и процессора признаков.
+
+    Предоставляет методы для одиночного и пакетного предсказания.
+    """
 
     def __init__(self, model, multimodal_processor):
-        """
-        Initialize prediction processor
-        
+        """Инициализация процессора предсказаний.
+
         Args:
-            model: Trained MultiModalClassifier
-            multimodal_processor: MultiModalFeatureUnion for feature extraction
+            model: Обученный классификатор MultiModalClassifier.
+            multimodal_processor: Процессор MultiModalFeatureUnion для извлечения признаков.
         """
         self.model = model
         self.multimodal_processor = multimodal_processor
 
     def predict_single(self, image_bytes: bytes, dataframe_row: dict, image_filename: str = None) -> PredictionResponse:
-        """
-        Single prediction: 1 image + 1 dataframe row
-        
-        Args:
-            image_bytes: Image file bytes
-            dataframe_row: Dictionary containing single row data
-            image_filename: Original image filename
-            
-        Returns:
-            PredictionResponse with prediction and confidence
-        """
+        """Одиночное предсказание: одно изображение и одна строка данных.
 
+        Выполняет предсказание для одного объекта на основе
+        изображения и соответствующей строки данных.
+
+        Args:
+            image_bytes: Байты изображения.
+            dataframe_row: Словарь с данными одной строки.
+            image_filename: Имя файла изображения (необязательно).
+
+        Returns:
+            PredictionResponse с предсказанием и уверенностью.
+
+        Raises:
+            Exception: Ошибка при выполнении предсказания.
+        """
         try:
             logger.info(f"Starting single prediction for image: {image_filename if image_filename else 'unknown'} and dataframe row with item_id: {dataframe_row.get('item_id', 'unknown')}")
             # Load and process image
@@ -78,16 +84,21 @@ class PredictionProcessor:
         
 
     def predict_batch(self, image_bytes_list: List[bytes], dataframe: DataFrame, image_filenames: List[str] = None) -> BatchPredictionResponse:
-        """
-        Batch prediction: multiple images + multiple dataframe rows
-        
+        """Пакетное предсказание: несколько изображений и несколько строк данных.
+
+        Выполняет предсказания для набора объектов на основе
+        изображений и соответствующих строк данных.
+
         Args:
-            image_bytes_list: List of image file bytes
-            dataframe: DataFrame with multiple rows
-            image_filenames: List of original image filenames
-            
+            image_bytes_list: Список байтов изображений.
+            dataframe: DataFrame с несколькими строками данных.
+            image_filenames: Список имен файлов изображений (необязательно).
+
         Returns:
-            BatchPredictionResponse with predictions and confidences
+            BatchPredictionResponse с предсказаниями и уверенностями.
+
+        Raises:
+            Exception: Ошибка при выполнении пакетного предсказания.
         """
         try:
             logger.info(f"Starting batch prediction for {len(image_bytes_list)} images and dataframe with {len(dataframe)} rows")

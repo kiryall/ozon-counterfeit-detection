@@ -9,57 +9,78 @@ import numpy as np
 
 
 class PredictionType(str, Enum):
-    """Enum for prediction types"""
+    """Перечисление типов предсказаний.
+
+    Определяет возможные значения результата предсказания:
+    - FAKE: объект определен как фейковый
+    - REAL: объект определен как реальный
+    """
     FAKE = "FAKE"
     REAL = "REAL"
 
 
 class SinglePredictionRequest(BaseModel):
+    """Модель запроса для одиночного предсказания.
+
+    Примечание: в FastAPI загрузка файлов обрабатывается отдельно через UploadFile.
+    Эта модель используется только для валидации ответа.
     """
-    Request model for single prediction (1 image + 1 row from dataframe).
-    Accepts uploaded files via form data.
-    """
-    # Note: In FastAPI, file uploads are handled separately via UploadFile
-    # This model is used for response validation only
     pass
 
 
 class BatchPredictionRequest(BaseModel):
+    """Модель запроса для пакетного предсказания.
+
+    Примечание: в FastAPI загрузка файлов обрабатывается отдельно через UploadFile.
+    Эта модель используется только для валидации ответа.
     """
-    Request model for batch prediction (multiple images + multiple rows).
-    Accepts uploaded files via form data.
-    """
-    # Note: In FastAPI, file uploads are handled separately via UploadFile
-    # This model is used for response validation only
     pass
 
 
 class PredictionResponse(BaseModel):
+    """Модель ответа для одиночного предсказания.
+
+    Содержит результат предсказания, уверенность и идентификатор объекта.
     """
-    Response model for single prediction.
-    """
-    prediction: PredictionType = Field(..., description="Prediction result: FAKE or REAL")
-    confidence: float = Field(..., ge=0, le=1, description="Confidence score (0-1)")
-    item_id: Optional[str] = Field(None, description="Item ID from dataframe")
+    prediction: PredictionType = Field(..., description="Результат предсказания: FAKE или REAL")
+    confidence: float = Field(..., ge=0, le=1, description="Оценка уверенности (0-1)")
+    item_id: Optional[str] = Field(None, description="Идентификатор объекта из данных")
 
 
 class BatchPredictionResponse(BaseModel):
+    """Модель ответа для пакетного предсказания.
+
+    Содержит списки результатов предсказаний, уверенностей и идентификаторов объектов.
     """
-    Response model for batch predictions.
-    """
-    predictions: List[PredictionType] = Field(..., description="List of prediction results")
-    confidences: List[float] = Field(..., description="List of confidence scores")
-    item_ids: Optional[List[str]] = Field(None, description="List of item IDs from dataframe")
-    count: int = Field(..., description="Number of predictions")
-    message: Optional[str] = Field(None, description="Additional message")
+    predictions: List[PredictionType] = Field(..., description="Список результатов предсказаний")
+    confidences: List[float] = Field(..., description="Список оценок уверенности")
+    item_ids: Optional[List[str]] = Field(None, description="Список идентификаторов объектов из данных")
+    count: int = Field(..., description="Количество предсказаний")
+    message: Optional[str] = Field(None, description="Дополнительное сообщение")
 
 
 class ImageProcessor:
-    """Helper class for processing uploaded images"""
+    """Вспомогательный класс для обработки загруженных изображений.
+
+    Предоставляет статические методы для загрузки, валидации
+    и преобразования изображений.
+    """
 
     @staticmethod
     def load_image_from_bytes(image_bytes: bytes) -> Image.Image:
-        """Convert bytes to PIL Image"""
+        """Загрузка изображения из байтов.
+
+        Преобразует байты изображения в объект PIL Image.
+
+        Args:
+            image_bytes: Байты изображения.
+
+        Returns:
+            Объект PIL Image.
+
+        Raises:
+            ValueError: Не удалось загрузить изображение из байтов.
+        """
         try:
             image = Image.open(BytesIO(image_bytes))
             return image
@@ -68,24 +89,57 @@ class ImageProcessor:
 
     @staticmethod
     def validate_image_format(image: Image.Image) -> bool:
-        """Validate image format"""
+        """Валидация формата изображения.
+
+        Проверяет, поддерживается ли формат изображения.
+
+        Args:
+            image: Объект PIL Image.
+
+        Returns:
+            True, если формат поддерживается, иначе False.
+        """
         valid_formats = {'JPEG', 'PNG', 'BMP', 'GIF', 'TIFF'}
         return image.format in valid_formats
 
     @staticmethod
     def get_image_array(image: Image.Image) -> np.ndarray:
-        """Convert PIL Image to numpy array"""
+        """Преобразование PIL Image в numpy массив.
+
+        Args:
+            image: Объект PIL Image.
+
+        Returns:
+            Numpy массив, представляющий изображение.
+        """
         if image.mode != 'RGB':
             image = image.convert('RGB')
         return np.array(image)
 
 
 class DataFrameProcessor:
-    """Helper class for processing uploaded dataframe files"""
+    """Вспомогательный класс для обработки загруженных файлов данных.
+
+    Предоставляет статические методы для загрузки и валидации
+    DataFrame из различных форматов файлов.
+    """
 
     @staticmethod
     def load_dataframe_from_bytes(file_bytes: bytes, filename: str) -> DataFrame:
-        """Load DataFrame from uploaded file"""
+        """Загрузка DataFrame из загруженного файла.
+
+        Поддерживает форматы CSV и Excel.
+
+        Args:
+            file_bytes: Байты файла.
+            filename: Имя файла с расширением.
+
+        Returns:
+            Загруженный DataFrame.
+
+        Raises:
+            ValueError: Неподдерживаемый формат файла или ошибка загрузки.
+        """
         try:
             if filename.endswith('.csv'):
                 df = DataFrame.from_csv(BytesIO(file_bytes), index=False)
@@ -103,7 +157,19 @@ class DataFrameProcessor:
 
     @staticmethod
     def validate_dataframe(df: DataFrame) -> bool:
-        """Validate dataframe structure"""
+        """Валидация структуры DataFrame.
+
+        Проверяет, что DataFrame не пустой и содержит строки.
+
+        Args:
+            df: DataFrame для валидации.
+
+        Returns:
+            True, если DataFrame валиден.
+
+        Raises:
+            ValueError: DataFrame пустой или не содержит строк.
+        """
         if df.empty:
             raise ValueError("DataFrame is empty")
         if len(df) == 0:
@@ -112,7 +178,18 @@ class DataFrameProcessor:
 
     @staticmethod
     def get_row_as_dict(df: DataFrame, index: int) -> dict:
-        """Get single row as dictionary"""
+        """Получение одной строки в виде словаря.
+
+        Args:
+            df: Исходный DataFrame.
+            index: Индекс строки.
+
+        Returns:
+            Словарь со значениями строки.
+
+        Raises:
+            IndexError: Индекс выходит за пределы диапазона.
+        """
         if index >= len(df):
             raise IndexError(f"Row index {index} out of range")
         return df.iloc[index].to_dict()

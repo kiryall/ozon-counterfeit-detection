@@ -22,19 +22,24 @@ async def predict_upload(
     image: UploadFile = File(..., description="Uploaded image file"),
     dataframe: UploadFile = File(..., description="Uploaded CSV/Excel file"),
 ):
-    """
-    Unified prediction endpoint for both single and batch predictions.
+    """Универсальный эндпоинт для предсказания на одном или нескольких изображениях.
 
-    - If dataframe has 1 row and 1 image: single prediction
-    - If dataframe has multiple rows and multiple images: batch prediction
+    Выполняет предсказание на основе загруженных изображения и данных:
+    - Если в dataframe 1 строка и 1 изображение: одиночное предсказание
+    - Если в dataframe несколько строк и несколько изображений: пакетное предсказание
 
     Args:
-        image: Uploaded image file (JPEG, PNG, etc.)
-        dataframe: Uploaded CSV or Excel file with data rows
+        image: Загруженный файл изображения (JPEG, PNG и др.).
+        dataframe: Загруженный CSV или Excel файл с данными строк.
 
     Returns:
-        PredictionResponse for single prediction
-        BatchPredictionResponse for batch predictions
+        PredictionResponse для одиночного предсказания.
+        BatchPredictionResponse для пакетного предсказания.
+
+    Raises:
+        HTTPException 503: Модель не загружена.
+        HTTPException 400: Ошибка валидации данных.
+        HTTPException 500: Внутренняя ошибка сервера.
     """
     from main import model, multimodal_processor
 

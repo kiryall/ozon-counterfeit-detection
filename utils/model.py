@@ -21,9 +21,10 @@ logger = setup_logging(log_file="model.log", console=True, remove_file=True, log
 
 
 class MultiModalClassifier(BaseEstimator, ClassifierMixin):
-    """
-    Универсальный классификатор для мультимодальных данных.
-    Поддерживает различные алгоритмы и оптимизацию гиперпараметров. # в разработке
+    """Универсальный классификатор для мультимодальных данных.
+
+    Поддерживает различные алгоритмы машинного обучения (CatBoost, LightGBM, XGBoost)
+    и предоставляет единый интерфейс для обучения и предсказания.
     """
 
     def __init__(self, 
@@ -33,19 +34,15 @@ class MultiModalClassifier(BaseEstimator, ClassifierMixin):
                  classification_threshold: float = 0.5,
                  cv_folds: int = 5,
                  random_state: int = config.SEED):
-        """
-        Parameters:
-        -----------
-        algorithm : str
-            Алгоритм модели ('catboost', 'lightgbm', 'xgboost')
-        cat_features :  list
-            список категориальных фич
-        model_params : dict
-            Параметры модели
-        cv_folds : int
-            Количество фолдов для кросс-валидации
-        random_state : int
-            Seed для воспроизводимости
+        """Инициализация мультимодального классификатора.
+
+        Args:
+            algorithm: Алгоритм модели ('catboost', 'lightgbm', 'xgboost').
+            cat_features: Список категориальных признаков.
+            model_params: Параметры модели.
+            classification_threshold: Порог классификации.
+            cv_folds: Количество фолдов для кросс-валидации.
+            random_state: Зерно случайности для воспроизводимости.
         """
         self.algorithm = algorithm
         self.cat_features = cat_features or []
@@ -60,7 +57,16 @@ class MultiModalClassifier(BaseEstimator, ClassifierMixin):
         self.classification_threshold = classification_threshold
 
     def _init_model(self):
-        """ Инициализация модели """
+        """Инициализация модели машинного обучения.
+
+        Создает экземпляр модели на основе выбранного алгоритма.
+
+        Returns:
+            Экземпляр модели.
+
+        Raises:
+            ValueError: Алгоритм не поддерживается.
+        """
         if self.algorithm == 'catboost':
             # обновляем параметры
             base_params = config.CATBOOST_PARAMS.copy()
@@ -73,7 +79,19 @@ class MultiModalClassifier(BaseEstimator, ClassifierMixin):
 
 
     def _optimal_threshold(self, model, X_val, y_val):
-        """Функция ищет оптимальный порог классификации"""
+        """Поиск оптимального порога классификации.
+
+        Перебирает различные значения порога и выбирает тот,
+        при котором достигается максимальное значение F1-меры.
+
+        Args:
+            model: Обученная модель.
+            X_val: Валидационные данные.
+            y_val: Валидационные метки.
+
+        Returns:
+            Оптимальный порог классификации.
+        """
         probas = model.predict_proba(X_val)[:, 1]
         thresholds = np.linspace(0.05, 0.95, 250)
         best_threshold = 0.5
@@ -90,19 +108,17 @@ class MultiModalClassifier(BaseEstimator, ClassifierMixin):
     
 
     def fit(self, X, y, X_val=None, y_val=None, **kwargs):
-        """
-        Обучение модели
-        
-        Parameters:
-        -----------
-        X : array-like
-            Признаки для обучения
-        y : array-like
-            Целевая переменная
-        X_val : array-like, optional
-            Валидационные признаки
-        y_val : array-like, optional
-            Валидационная целевая переменная
+        """Обучение модели на тренировочных данных.
+
+        Обучает модель на переданных данных, выполняет валидацию
+        и автоматически подбирает оптимальный порог классификации.
+
+        Args:
+            X: Признаки для обучения.
+            y: Целевая переменная.
+            X_val: Валидационные признаки (необязательно).
+            y_val: Валидационная целевая переменная (необязательно).
+            **kwargs: Дополнительные аргументы для метода fit модели.
         """
         self._init_model()
 
@@ -128,8 +144,20 @@ class MultiModalClassifier(BaseEstimator, ClassifierMixin):
 
 
     def predict_proba(self, X, **kwargs):
-        """Предсказание вероятности классов"""
+        """Предсказание вероятностей классов.
 
+        Возвращает вероятности принадлежности к каждому классу.
+
+        Args:
+            X: Признаки для предсказания.
+            **kwargs: Дополнительные аргументы.
+
+        Returns:
+            Массив вероятностей классов.
+
+        Raises:
+            ValueError: Модель не обучена.
+        """
         if self.model is None:
             raise ValueError("Модель не обучена!")
 
@@ -145,8 +173,17 @@ class MultiModalClassifier(BaseEstimator, ClassifierMixin):
         
 
     def predict(self, X, **kwargs):
-        """Предсказание классов"""
+        """Предсказание классов для входных данных.
 
+        Использует порог классификации для определения класса.
+
+        Args:
+            X: Признаки для предсказания.
+            **kwargs: Дополнительные аргументы.
+
+        Returns:
+            Массив предсказанных классов.
+        """
         probas = self.predict_proba(X)
 
         if probas.shape[1] == 2:
@@ -156,7 +193,20 @@ class MultiModalClassifier(BaseEstimator, ClassifierMixin):
         
 
     def tune_threshold(self, X_val, y_val):
-        """Ручной вызов подбора порога"""
+        """Ручной запуск подбора оптимального порога классификации.
+
+        Выполняет поиск оптимального порога на валидационных данных.
+
+        Args:
+            X_val: Валидационные данные.
+            y_val: Валидационные метки.
+
+        Returns:
+            Оптимальный порог классификации.
+
+        Raises:
+            ValueError: Модель не обучена.
+        """
         if self.model is None:
             raise ValueError("Сначала обучите модель!")
         
@@ -166,7 +216,17 @@ class MultiModalClassifier(BaseEstimator, ClassifierMixin):
     
 
     def save_model(self, filepath: str):
-        """Сохранение модели в файл"""
+        """Сохранение модели в файл.
+
+        Сохраняет модель в нативном формате (.cbm для CatBoost)
+        и метаданные в отдельный файл.
+
+        Args:
+            filepath: Путь для сохранения модели.
+
+        Raises:
+            ValueError: Модель не обучена.
+        """
         if self.model is None:
             raise ValueError("Модель не обучена!")
         
@@ -198,8 +258,19 @@ class MultiModalClassifier(BaseEstimator, ClassifierMixin):
 
     @classmethod
     def load_model(cls, filepath: str):
-        """Загрузка модели из файла"""
-        
+        """Загрузка модели из файла.
+
+        Загружает модель и метаданные из файлов.
+
+        Args:
+            filepath: Путь к файлу модели.
+
+        Returns:
+            Загруженный экземпляр MultiModalClassifier.
+
+        Raises:
+            FileNotFoundError: Файл модели или метаданных не найден.
+        """
         # Определяем пути для модели и метаданных
         if filepath.endswith('.pkl'):
             model_path = filepath.replace('.pkl', '.cbm')

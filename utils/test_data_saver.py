@@ -1,7 +1,6 @@
 # utils/test_data_saver.py
 import os
 import shutil
-import pandas as pd
 from pathlib import Path
 from core.config import DATA_CSV, IMG_DIR
 from core.logging import setup_logging
@@ -14,10 +13,21 @@ def save_single_test_data(
                           csv_path: str = DATA_CSV,
                           row_index: int = 0,
                           output_dir: str = "test_data/single/"):
-    """
-    Из data.csv сохраняет одну строку в test_data/single/test_data.csv и одну картинку в test_data/single/
-    """
+    """Сохранение одной строки данных и соответствующего изображения для тестирования.
 
+    Извлекает одну строку из data.csv и соответствующее изображение,
+    сохраняя их в указанную директорию для использования в тестах.
+
+    Args:
+        img_dir: Путь к директории с изображениями.
+        csv_path: Путь к CSV файлу с данными.
+        row_index: Индекс строки для извлечения.
+        output_dir: Директория для сохранения тестовых данных.
+
+    Raises:
+        ValueError: Ошибка при сохранении CSV данных.
+        FileNotFoundError: Изображение не найдено.
+    """
     os.makedirs(output_dir, exist_ok=True)
 
     path = Path(csv_path)

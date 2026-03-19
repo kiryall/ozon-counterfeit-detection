@@ -8,11 +8,19 @@ import os
 logger = setup_logging(log_file="model_loader.log", console=True, remove_file=True, logger_name="model_loader")
 
 def load_model(path: str):
-    """
-    Загружает модель из указанного пути. Ожидается, что модель
-    сохранена в формате .cbm с соответствующим .pkl файлом метаданных.
-    param path: Путь к файлу модели (может быть .cbm или .pkl)
-    return: Загруженный экземпляр MultiModalClassifier
+    """Загрузка модели из указанного пути.
+
+    Ожидается, что модель сохранена в формате .cbm с соответствующим
+    .pkl файлом метаданных.
+
+    Args:
+        path: Путь к файлу модели (может быть .cbm или .pkl).
+
+    Returns:
+        Загруженный экземпляр MultiModalClassifier.
+
+    Raises:
+        FileNotFoundError: Файл модели не найден.
     """
     if not os.path.exists(path):
         raise FileNotFoundError(f"Model file not found: {path}")
@@ -22,10 +30,19 @@ def load_model(path: str):
 
 
 def load_multimodal_processor(path: str):
-    """
-    Загружает препроцессор для мультимодальных данных из указанного пути.
-    param path: Путь к файлу препроцессора (ожидается .pkl)
-    return: Загруженный препроцессор
+    """Загрузка препроцессора для мультимодальных данных.
+
+    Загружает препроцессор мультимодальных признаков из указанного пути.
+
+    Args:
+        path: Путь к файлу препроцессора (ожидается .pkl).
+
+    Returns:
+        Загруженный препроцессор MultiModalFeatureUnion.
+
+    Raises:
+        FileNotFoundError: Файл препроцессора не найден.
+        ValueError: Загруженный объект не является MultiModalFeatureUnion.
     """
     if not os.path.exists(path):
         raise FileNotFoundError(f"Multimodal processor file not found: {path}")

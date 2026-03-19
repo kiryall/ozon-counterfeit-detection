@@ -9,7 +9,13 @@ router = APIRouter(
 
 @router.get("")
 async def health_check():
-    """Health check endpoint"""
+    """Проверка состояния здоровья приложения.
+
+    Проверяет, загружены ли модель и мультимодальный процессор.
+
+    Returns:
+        JSON-ответ с информацией о состоянии приложения.
+    """
     from main import model, multimodal_processor
     
     is_healthy = model is not None and multimodal_processor is not None

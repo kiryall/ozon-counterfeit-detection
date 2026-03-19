@@ -20,8 +20,10 @@ logger = setup_logging(log_file="features.log", console=True, remove_file=True, 
 
 
 class ImageFeatureExtractor(BaseEstimator, TransformerMixin):
-    """
-    Класс для получения эмбеддингов изображений
+    """Класс для извлечения эмбеддингов из изображений.
+
+    Использует предобученные модели (ResNet, MobileNet) для извлечения
+    визуальных признаков из изображений.
     """
 
     MODEL_REGISTRY = {
@@ -41,8 +43,15 @@ class ImageFeatureExtractor(BaseEstimator, TransformerMixin):
         self.img_columns = []
 
     def _build_backbone(self) -> nn.Module:
-        """
-        Создание backbone модели через registry
+        """Создание backbone модели через реестр.
+
+        Создает экземпляр модели на основе заданного имени модели.
+
+        Returns:
+            Модель без классификационного слоя.
+
+        Raises:
+            ValueError: Модель не поддерживается или неизвестная архитектура.
         """
         if self.model_name not in self.MODEL_REGISTRY:
             raise ValueError(f"Unsupported model: {self.model_name}")
@@ -62,8 +71,12 @@ class ImageFeatureExtractor(BaseEstimator, TransformerMixin):
         return model
 
     def _init_model(self):
-        """
-        Инициализация модели
+        """Инициализация модели для извлечения признаков.
+
+        Загружает предобученную модель и переводит её в режим оценки.
+
+        Returns:
+            Инициализированная модель.
         """
         logger.info(f"Loading model: {self.model_name}")
 
@@ -78,6 +91,21 @@ class ImageFeatureExtractor(BaseEstimator, TransformerMixin):
         return self
 
     def transform(self, dataset, y=None):
+        """Извлечение признаков из изображений.
+
+        Обрабатывает датасет изображений и извлекает визуальные признаки
+        с помощью предобученной модели.
+
+        Args:
+            dataset: Датасет с изображениями.
+            y: Целевая переменная (не используется).
+
+        Returns:
+            DataFrame с извлеченными признаками изображений.
+
+        Raises:
+            ValueError: Модель не инициализирована (не вызван fit()).
+        """
         if self.model is None:
             raise ValueError('Сначала нужно вызвать fit()')
 
@@ -129,15 +157,19 @@ class ImageFeatureExtractor(BaseEstimator, TransformerMixin):
         return self.transform(dataset)
     
     def get_img_features(self):
-        """
-        Возрращает список извлеченных фич
+        """Получение списка извлеченных признаков изображений.
+
+        Returns:
+            Список имен колонок признаков изображений.
         """
         return self.img_columns
 
 
 class SentenceEmbedder(BaseEstimator, TransformerMixin):
-    """
-    Класс для извлечения эмбеддингов из текста описания товара (sentence_transformers)
+    """Класс для извлечения эмбеддингов из текста описания товара.
+
+    Использует Sentence Transformers для получения семантических
+    представлений текстовых описаний.
     """
     def __init__(self,
                  model_name='sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2',
@@ -150,11 +182,14 @@ class SentenceEmbedder(BaseEstimator, TransformerMixin):
         self.text_columns = []
 
     def _init_model(self):
-        """
-        Инициализация модели
-        """
+        """Инициализация модели Sentence Transformers.
 
-        #пути для моделей
+        Загружает модель из кэша или скачивает её при первом запуске.
+        Сохраняет модель в кэш для последующего использования.
+
+        Returns:
+            Инициализированная модель SentenceTransformer.
+        """
         model_cache_dir = Path(config.MODEL_CACHE_DIR) / self.model_name.replace("/", "_")
         model_cache_dir.mkdir(parents=True, exist_ok=True)
 
@@ -184,8 +219,21 @@ class SentenceEmbedder(BaseEstimator, TransformerMixin):
         return self
 
     def transform(self, df, y=None):
-        """
-        Извлечение эмбеддингов для текста
+        """Извлечение эмбеддингов из текстовых описаний.
+
+        Обрабатывает текстовые описания и преобразует их в
+        семантические векторы с помощью Sentence Transformer.
+
+        Args:
+            df: DataFrame с текстовыми данными.
+            y: Целевая переменная (не используется).
+
+        Returns:
+            DataFrame с извлеченными текстовыми эмбеддингами.
+
+        Raises:
+            ValueError: Модель не инициализирована (не вызван fit()).
+            Exception: Ошибка при извлечении эмбеддингов.
         """
         if self.model is None:
             raise ValueError('Сначала нужно вызвать fit()')
@@ -223,7 +271,9 @@ class SentenceEmbedder(BaseEstimator, TransformerMixin):
         return self.fit(X).transform(X)   
 
     def get_text_features(self):
-        """
-        Возрращает список извлеченных фич
+        """Получение списка извлеченных текстовых признаков.
+
+        Returns:
+            Список имен колонок текстовых признаков.
         """
         return self.text_columns
